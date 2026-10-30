@@ -58,7 +58,7 @@ estratégia inicial, a pilha e as fases. Estado: **desenvolvimento**, sem produ�
 | Fase | Entrega | Pronto quando |
 |---|---|---|
 | F0 Fundação | Repositório, CI, Dockerfile, `/saude`, projeto e PostgreSQL no EasyPanel, domínio com TLS | `https://meubizu.fabricadosdados.com.br/saude` responde ok |
-| F1 Referência | Base de referência carregada no PostgreSQL; rotas `anos`, `cadernos`, `questoes` (sem gabarito) | Seletores devolvem os dados reais, com testes |
+| F1 Referência (feita) | Base de referência carregada no PostgreSQL; rotas `anos`, `cadernos`, `questoes` (sem gabarito) | Seletores devolvem os dados reais, com testes (PostgreSQL real, também com a exportação real) |
 | F2 Conta e provas | Cadastro e login; gravar prova; corrigir; perfil por habilidade; RLS | Teste negativo: um aluno não lê a prova de outro |
 | F3 Tela | Incluir resultado em 4 passos e tela de resultado | Fluxo completo no celular |
 | F4 Histórico | Histórico, perfil por área e `nota_estimada` | Comparação entre provas de anos diferentes |
@@ -84,8 +84,9 @@ Detalhe do fluxo, da API e da tela: [`api-e-tela.md`](api-e-tela.md).
 1. **Licença do repositório** público (enquanto não houver, todos os direitos reservados).
 2. **Nome final** e busca de marca no INPI (classes 9, 41 e 42).
 3. **Cadernos adaptados:** há dados de referência próprios? Hoje ficam fora.
-4. **Como a base de referência chega ao servidor:** arquivo gerado no laboratório e carregado por
-   um comando da aplicação (candidatos: volume no EasyPanel ou anexo de release do GitHub).
+4. ~~Como a base de referência chega ao servidor~~ **Resolvido na F1:** o laboratório exporta CSVs
+   (`python -m enem_simulador.exportar_ref`, fora do git) e `python -m app.carga_ref PASTA` carrega
+   no schema `ref`, numa transação, de uma máquina com acesso ao banco.
 5. **Login com Google** já no MVP ou depois.
 
 ## 8. Riscos

@@ -2,7 +2,10 @@
 
 from fastapi import FastAPI
 
+from app.rotas_referencia import router as rotas_referencia
+
 app = FastAPI(title="Meu Bizu", version="0.1.0")
+app.include_router(rotas_referencia)
 
 
 @app.get("/saude")
