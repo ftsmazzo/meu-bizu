@@ -89,6 +89,7 @@ def pg_url():
 def conn(pg_url):
     """Conexão com o banco limpo e as migrações aplicadas."""
     with psycopg.connect(pg_url) as c:
+        c.execute("drop schema if exists app cascade")
         c.execute("drop schema if exists ref cascade")
         c.execute("drop table if exists public.schema_migracoes")
         c.commit()

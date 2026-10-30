@@ -90,6 +90,12 @@ Corpo de `POST /alunos/{id}/provas`:
 Erros: `422` com a mensagem de `respostas_da_folha` (tamanho errado, letra inválida, caderno
 ambíguo, língua faltando); `404` caderno inexistente; `403` fora do escopo. Nada é gravado em erro.
 
+**Como ficou na F2** (o aluno opera sozinho, então o escopo é sempre o usuário da sessão e nenhum
+caminho leva id de aluno): `POST /conta/cadastro`, `POST /conta/entrar`, `POST /conta/sair`,
+`GET /conta/eu`, `POST /provas`, `GET /provas`, `GET /provas/{id}`, `DELETE /provas/{id}` e
+`GET /perfil?area=&desde=`. Prova de outra pessoa responde 404, igual a prova inexistente. A edição
+(`PUT`) e o `nota_estimada` ficam para a F4; o relatório por IA, para a F5.
+
 ## 5. Dados e segurança na integração
 
 - Trocar o SQLite do protótipo por tabelas no PostgreSQL com `tenant_id` + RLS (mesmo padrão do

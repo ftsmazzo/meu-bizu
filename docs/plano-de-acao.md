@@ -59,7 +59,7 @@ estratégia inicial, a pilha e as fases. Estado: **desenvolvimento**, sem produ�
 |---|---|---|
 | F0 Fundação | Repositório, CI, Dockerfile, `/saude`, projeto e PostgreSQL no EasyPanel, domínio com TLS | `https://meubizu.fabricadosdados.com.br/saude` responde ok |
 | F1 Referência (feita) | Base de referência carregada no PostgreSQL; rotas `anos`, `cadernos`, `questoes` (sem gabarito) | Seletores devolvem os dados reais, com testes (PostgreSQL real, também com a exportação real) |
-| F2 Conta e provas | Cadastro e login; gravar prova; corrigir; perfil por habilidade; RLS | Teste negativo: um aluno não lê a prova de outro |
+| F2 Conta e provas (código pronto; falta implantar) | Cadastro e login; gravar prova; corrigir; perfil por habilidade; RLS | Teste negativo: um aluno não lê a prova de outro |
 | F3 Tela | Incluir resultado em 4 passos e tela de resultado | Fluxo completo no celular |
 | F4 Histórico | Histórico, perfil por área e `nota_estimada` | Comparação entre provas de anos diferentes |
 | F5 Relatório | Texto do relatório por IA, linguagem Meu Bizu | Texto só com números do perfil |
