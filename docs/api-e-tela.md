@@ -96,6 +96,15 @@ caminho leva id de aluno): `POST /conta/cadastro`, `POST /conta/entrar`, `POST /
 `GET /perfil?area=&desde=`. Prova de outra pessoa responde 404, igual a prova inexistente. O
 relatório por IA fica para a F5.
 
+**F5 (código pronto):** `POST /relatorio?area=` (sem `area` = todas). Fluxo: monta os fatos do
+perfil (áreas, nota estimada, variação e até 3 habilidades com sinal de lacuna por área, com
+contagens; sem nome, e-mail ou id), pede o texto à IA e só o aceita se todo número do texto estiver
+nos fatos. Sem chave (`ANTHROPIC_API_KEY`), com erro da IA ou com número fora dos fatos, devolve o
+texto padrão escrito por código (`origem: "padrao"`). Textos da IA ficam guardados em
+`app.relatorio` (migração 003, RLS) com o hash dos fatos: o mesmo perfil não paga duas vezes. Modelo
+em `RELATORIO_MODELO` (padrão `claude-haiku-5-5`). Gerar é auditado (`gerar_relatorio`). A tela só
+chama quando o aluno clica, pois a IA tem custo; ainda não há limite de pedidos por aluno (fase 6).
+
 **F4 (feita):**
 
 - `nota_estimada` em toda prova corrigida: nota pela TRI a partir dos acertos, a mesma conta para

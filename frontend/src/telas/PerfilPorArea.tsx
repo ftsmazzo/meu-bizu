@@ -5,7 +5,11 @@ import { nomeDaArea } from "../rotulos";
 import { ListaHabilidades } from "./Habilidades";
 
 /** Onde focar numa área, juntando todas as provas dela. */
-export function PerfilPorArea(props: { area: Area; aoVoltar: () => void }) {
+export function PerfilPorArea(props: {
+  area: Area;
+  aoVoltar: () => void;
+  aoVerRelatorio: () => void;
+}) {
   const perfil = useQuery({ queryKey: ["perfil"], queryFn: () => api.perfil(null) });
   const habilidades = perfil.data?.habilidades.filter((h) => h.area === props.area) ?? [];
   const provas = perfil.data?.areas.find((a) => a.area === props.area)?.provas ?? 0;
@@ -30,6 +34,9 @@ export function PerfilPorArea(props: { area: Area; aoVoltar: () => void }) {
           ) : (
             <ListaHabilidades habilidades={habilidades} />
           )}
+          <button type="button" className="primario" onClick={props.aoVerRelatorio}>
+            Relatório desta área
+          </button>
         </>
       )}
     </>

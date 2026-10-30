@@ -6,6 +6,7 @@ import { Entrada } from "./telas/Entrada";
 import { Incluir } from "./telas/Incluir";
 import { Inicio } from "./telas/Inicio";
 import { PerfilPorArea } from "./telas/PerfilPorArea";
+import { Relatorio } from "./telas/Relatorio";
 import { TelaResultado } from "./telas/TelaResultado";
 
 type Tela =
@@ -13,7 +14,8 @@ type Tela =
   | { nome: "incluir" }
   | { nome: "resultado"; id: string }
   | { nome: "corrigir"; id: string }
-  | { nome: "foco"; area: Area };
+  | { nome: "foco"; area: Area }
+  | { nome: "relatorio"; area: Area | null };
 
 /** Sem rotas no navegador: a tela é um estado. O cookie de sessão decide se há alguém logado. */
 export function App() {
@@ -45,6 +47,7 @@ export function App() {
           aoIncluir={() => setTela({ nome: "incluir" })}
           aoAbrir={resultado}
           aoVerFoco={(area) => setTela({ nome: "foco", area })}
+          aoVerRelatorio={() => setTela({ nome: "relatorio", area: null })}
           aoSair={() => {
             cliente.clear();
             void cliente.invalidateQueries({ queryKey: ["eu"] });
@@ -55,7 +58,19 @@ export function App() {
       {tela.nome === "corrigir" && (
         <Corrigir id={tela.id} aoVoltar={() => resultado(tela.id)} aoSalvar={resultado} />
       )}
-      {tela.nome === "foco" && <PerfilPorArea area={tela.area} aoVoltar={inicio} />}
+      {tela.nome === "foco" && (
+        <PerfilPorArea
+          area={tela.area}
+          aoVoltar={inicio}
+          aoVerRelatorio={() => setTela({ nome: "relatorio", area: tela.area })}
+        />
+      )}
+      {tela.nome === "relatorio" && (
+        <Relatorio
+          area={tela.area}
+          aoVoltar={() => setTela(tela.area ? { nome: "foco", area: tela.area } : { nome: "inicio" })}
+        />
+      )}
       {tela.nome === "resultado" && (
         <TelaResultado
           id={tela.id}

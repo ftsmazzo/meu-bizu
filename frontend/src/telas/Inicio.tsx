@@ -9,10 +9,11 @@ interface Props {
   aoIncluir: () => void;
   aoAbrir: (id: string) => void;
   aoVerFoco: (area: Area) => void;
+  aoVerRelatorio: () => void;
   aoSair: () => void;
 }
 
-export function Inicio({ usuario, aoIncluir, aoAbrir, aoVerFoco, aoSair }: Props) {
+export function Inicio({ usuario, aoIncluir, aoAbrir, aoVerFoco, aoVerRelatorio, aoSair }: Props) {
   const cliente = useQueryClient();
   const provas = useQuery({ queryKey: ["provas"], queryFn: api.provas });
   const perfil = useQuery({ queryKey: ["perfil"], queryFn: () => api.perfil(null) });
@@ -39,6 +40,11 @@ export function Inicio({ usuario, aoIncluir, aoAbrir, aoVerFoco, aoSair }: Props
       </button>
 
       {perfil.data && <Evolucao areas={perfil.data.areas} aoVerFoco={aoVerFoco} />}
+      {perfil.data && perfil.data.areas.length > 0 && (
+        <button type="button" onClick={aoVerRelatorio}>
+          Ver relatório completo
+        </button>
+      )}
 
       <h2>Suas provas</h2>
       {provas.isPending && <p className="carregando">Carregando…</p>}

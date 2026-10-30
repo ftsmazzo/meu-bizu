@@ -148,5 +148,10 @@ export const api = {
   prova: (id: string) => pedir<Resultado>(`/provas/${id}`),
   editarProva: (id: string, prova: NovaProva) => pedir<Resultado>(`/provas/${id}`, "PUT", prova),
   excluirProva: (id: string) => pedir<void>(`/provas/${id}`, "DELETE"),
+  relatorio: (area: Area | null) =>
+    pedir<{ texto: string; origem: "ia" | "padrao" }>(
+      area ? `/relatorio?area=${area}` : "/relatorio",
+      "POST",
+    ),
   perfil: (area: Area | null) => pedir<Perfil>(area ? `/perfil?area=${area}` : "/perfil"),
 };

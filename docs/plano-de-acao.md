@@ -62,7 +62,7 @@ estratégia inicial, a pilha e as fases. Estado: **desenvolvimento**, sem produ�
 | F2 Conta e provas (feita e implantada) | Cadastro e login; gravar prova; corrigir; perfil por habilidade; RLS | Teste negativo: um aluno não lê a prova de outro |
 | F3 Tela (feita e implantada; falta o aluno testar no celular) | Entrar, incluir resultado (prova, respostas, conferir) e tela de resultado | Fluxo completo no celular |
 | F4 Histórico (feita) | Histórico com nota estimada, evolução por área, "onde focar" juntando as provas da área, corrigir prova (PUT auditado) | Comparação entre provas de anos diferentes |
-| F5 Relatório | Texto do relatório por IA, linguagem Meu Bizu | Texto só com números do perfil |
+| F5 Relatório (código pronto; falta migração 003 e chave da IA no servidor) | `POST /relatorio` com texto por IA, linguagem Meu Bizu, trava de números e texto padrão de reserva | Texto só com números do perfil |
 | F6 Mentores e produção | Papel de mentor, backup, rate limit, observabilidade, termos e privacidade | Piloto com mentores |
 
 Detalhe do fluxo, da API e da tela: [`api-e-tela.md`](api-e-tela.md).
