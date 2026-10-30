@@ -34,7 +34,7 @@ estratégia inicial, a pilha e as fases. Estado: **desenvolvimento**, sem produ�
 | Camada | Escolha | Motivo |
 |---|---|---|
 | Backend | Python 3.12, FastAPI, Pydantic v2 | Mesma pilha da Fábrica; reaproveita o código do laboratório de dados (perfil, TRI, histórico). |
-| Acesso a dados | SQLAlchemy 2 + Alembic, psycopg 3 | Migrations versionadas; SQL explícito onde importa. |
+| Acesso a dados | psycopg 3 (+ pool) e migrações SQL versionadas (`backend/migracoes/*.sql`, `python -m app.migrar`) | Sem ORM: SQL explícito e fácil de auditar (RLS na F2). Troca do SQLAlchemy/Alembic planejado, por simplicidade. |
 | Banco | PostgreSQL 16 (serviço no EasyPanel) | Schema `ref` (referência, só leitura) e `app` (alunos e provas, com RLS por usuário). |
 | Fila e cache | **Sem Redis no MVP** | Simplicidade. Entra quando houver rate limit de login ou fila do relatório por IA. |
 | Frontend | React 18, Vite, TypeScript, TanStack Query, Tailwind | Mesma base dos outros projetos. Mobile-first e instalável (PWA), pois o aluno usa o celular. |
