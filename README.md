@@ -23,4 +23,15 @@ ruff check . && ruff format --check .
 uvicorn app.main:app --reload
 ```
 
+Interface (React, Vite):
+
+```bash
+cd frontend
+npm ci
+npm test
+npm run dev   # http://localhost:5173, com proxy para a API em 127.0.0.1:8000
+```
+
+Em produção a API serve o build do front (pasta `static`, gerada pelo Dockerfile).
+
 Segredos ficam em `.env` (copie de `.env.example`); nunca no repositório.

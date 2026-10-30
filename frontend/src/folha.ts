@@ -1,0 +1,44 @@
+/** A folha de respostas do aluno: uma posição por questão, `null` enquanto não foi preenchida. */
+
+export type Letra = "A" | "B" | "C" | "D" | "E";
+export type Marca = Letra | "." | "*"; // "." em branco, "*" dupla marcação
+export type Folha = (Marca | null)[];
+
+export const LETRAS: Letra[] = ["A", "B", "C", "D", "E"];
+
+export function marcaDaTecla(tecla: string): Marca | null {
+  if (tecla === "." || tecla === "*") return tecla;
+  const maiuscula = tecla.toUpperCase();
+  return tecla.length === 1 && "ABCDE".includes(maiuscula) ? (maiuscula as Letra) : null;
+}
+
+export function resumo(folha: Folha) {
+  const contar = (f: (m: Marca | null) => boolean) => folha.filter(f).length;
+  return {
+    marcadas: contar((m) => m !== null && m !== "." && m !== "*"),
+    brancos: contar((m) => m === "."),
+    duplas: contar((m) => m === "*"),
+    faltam: contar((m) => m === null),
+  };
+}
+
+export function folhaEmTexto(folha: Folha): string {
+  const faltam = resumo(folha).faltam;
+  if (faltam > 0) throw new Error(`faltam ${faltam} questões`);
+  return folha.join("");
+}
+
+/** Sinais de que a folha foi preenchida errado (não impedem gravar, só pedem conferência). */
+export function avisos(folha: Folha): string[] {
+  const { marcadas, brancos } = resumo(folha);
+  if (folha.length > 0 && brancos === folha.length) {
+    return ["Todas as questões estão em branco. Confira se era isso mesmo."];
+  }
+  if (marcadas >= 10) {
+    const maior = Math.max(...LETRAS.map((l) => folha.filter((m) => m === l).length));
+    if (maior / marcadas >= 0.9) {
+      return ["Quase tudo está na mesma letra. Confira se você não marcou sem querer."];
+    }
+  }
+  return [];
+}
