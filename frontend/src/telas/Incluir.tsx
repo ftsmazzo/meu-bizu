@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
-import { api, type Area, type Tipo } from "../api";
-import { avisos, folhaEmTexto, resumo, type Folha, type Marca } from "../folha";
+import { api, type Area, type Resultado, type Tipo } from "../api";
+import { avisos, folhaDeTexto, folhaEmTexto, resumo, type Folha, type Marca } from "../folha";
 import { AREAS } from "../rotulos";
 import { Grade } from "./Grade";
 
@@ -50,6 +50,20 @@ function guardarRascunho(r: Rascunho | null) {
   }
 }
 
+/** Abre uma prova já gravada no mesmo formulário, para o aluno corrigir. */
+function deResultado(p: Resultado): Rascunho {
+  return {
+    ano: p.ano,
+    area: p.area,
+    lingua: p.lingua,
+    coProva: p.co_prova,
+    tipo: p.tipo,
+    feitaEm: p.feita_em ?? "",
+    nota: p.nota === null ? "" : String(p.nota).replace(".", ","),
+    folha: folhaDeTexto(p.folha),
+  };
+}
+
 function hoje(): string {
   const d = new Date();
   const dois = (n: number) => String(n).padStart(2, "0");
@@ -58,15 +72,25 @@ function hoje(): string {
 
 const PASSOS = ["Prova", "Respostas", "Conferir"];
 
-export function Incluir(props: { aoVoltar: () => void; aoGravar: (id: string) => void }) {
+interface Props {
+  aoVoltar: () => void;
+  aoGravar: (id: string) => void;
+  /** Quando vem, o formulário corrige esta prova em vez de criar outra (e não mexe no rascunho). */
+  edicao?: Resultado;
+}
+
+export function Incluir(props: Props) {
+  const { edicao } = props;
   const cliente = useQueryClient();
   const [passo, setPasso] = useState<1 | 2 | 3>(1);
-  const [r, setR] = useState<Rascunho>(lerRascunho);
+  const [r, setR] = useState<Rascunho>(() => (edicao ? deResultado(edicao) : lerRascunho()));
   const mudar = (parte: Partial<Rascunho>) => setR((a) => ({ ...a, ...parte }));
   // Trocar qualquer coisa que defina a prova invalida as respostas já marcadas.
   const trocarProva = (parte: Partial<Rascunho>) => mudar({ ...parte, folha: [] });
 
-  useEffect(() => guardarRascunho(r), [r]);
+  useEffect(() => {
+    if (!edicao) guardarRascunho(r);
+  }, [r, edicao]);
 
   const anos = useQuery({ queryKey: ["anos"], queryFn: api.anos });
   const cadernos = useQuery({
@@ -93,8 +117,8 @@ export function Incluir(props: { aoVoltar: () => void; aoGravar: (id: string) =>
   const passo1Ok = r.coProva !== null && !linguaPendente && dataOk && notaOk;
 
   const gravar = useMutation({
-    mutationFn: () =>
-      api.gravarProva({
+    mutationFn: () => {
+      const prova = {
         ano: r.ano as number,
         area: r.area as Area,
         co_prova: r.coProva as number,
@@ -103,11 +127,14 @@ export function Incluir(props: { aoVoltar: () => void; aoGravar: (id: string) =>
         feita_em: r.tipo === "simulado" ? r.feitaEm : null,
         nota: notaNum,
         folha: folhaEmTexto(r.folha),
-      }),
+      };
+      return edicao ? api.editarProva(edicao.id, prova) : api.gravarProva(prova);
+    },
     onSuccess: (resultado) => {
       cliente.setQueryData(["prova", resultado.id], resultado);
       void cliente.invalidateQueries({ queryKey: ["provas"] });
-      guardarRascunho(null);
+      void cliente.invalidateQueries({ queryKey: ["perfil"] });
+      if (!edicao) guardarRascunho(null);
       props.aoGravar(resultado.id);
     },
   });
@@ -123,7 +150,7 @@ export function Incluir(props: { aoVoltar: () => void; aoGravar: (id: string) =>
       <button type="button" className="link" onClick={props.aoVoltar}>
         ← Voltar
       </button>
-      <h1>Incluir resultado</h1>
+      <h1>{edicao ? "Corrigir prova" : "Incluir resultado"}</h1>
       <ol className="passos">
         {PASSOS.map((nome, i) => (
           <li key={nome} aria-current={passo === i + 1 ? "step" : undefined}>
@@ -322,7 +349,7 @@ export function Incluir(props: { aoVoltar: () => void; aoGravar: (id: string) =>
               disabled={conta.faltam > 0 || gravar.isPending}
               onClick={() => gravar.mutate()}
             >
-              Gravar resultado
+              {edicao ? "Salvar correção" : "Gravar resultado"}
             </button>
           </div>
         </>

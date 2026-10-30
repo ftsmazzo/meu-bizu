@@ -93,8 +93,23 @@ ambíguo, língua faltando); `404` caderno inexistente; `403` fora do escopo. Na
 **Como ficou na F2** (o aluno opera sozinho, então o escopo é sempre o usuário da sessão e nenhum
 caminho leva id de aluno): `POST /conta/cadastro`, `POST /conta/entrar`, `POST /conta/sair`,
 `GET /conta/eu`, `POST /provas`, `GET /provas`, `GET /provas/{id}`, `DELETE /provas/{id}` e
-`GET /perfil?area=&desde=`. Prova de outra pessoa responde 404, igual a prova inexistente. A edição
-(`PUT`) e o `nota_estimada` ficam para a F4; o relatório por IA, para a F5.
+`GET /perfil?area=&desde=`. Prova de outra pessoa responde 404, igual a prova inexistente. O
+relatório por IA fica para a F5.
+
+**F4 (feita):**
+
+- `nota_estimada` em toda prova corrigida: nota pela TRI a partir dos acertos, a mesma conta para
+  provas com decil e sem ele, e independente da nota informada (é o eixo de comparação entre
+  provas de anos diferentes). Vem vazia quando o aluno acerta tudo ou nada, pois a TRI só daria
+  piso ou teto.
+- `PUT /provas/{id}` troca todos os dados da prova (mesmo corpo do `POST`), revalida e recalcula;
+  nada muda se a validação falhar. A auditoria `editar_prova` guarda `antes` e `depois`.
+- `GET /provas/{id}` e as respostas de `POST`/`PUT` trazem `folha` (o que o aluno marcou, nunca o
+  gabarito) para a tela de correção; a lista `GET /provas` não traz.
+- `GET /perfil` ganhou `areas`: por área, o número de provas, a nota estimada da mais recente
+  (`ultima`), a da anterior e a `variacao`. Os números vêm do servidor; a tela só os escreve.
+- Tela: "Sua evolução" e a linha do tempo com nota estimada no início, "Onde focar" por área
+  (habilidades juntando todas as provas da área) e "Corrigir respostas" na tela do resultado.
 
 ## 5. Dados e segurança na integração
 

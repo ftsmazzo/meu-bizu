@@ -1,13 +1,19 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { api } from "./api";
+import { api, type Area } from "./api";
 import { Entrada } from "./telas/Entrada";
 import { Incluir } from "./telas/Incluir";
 import { Inicio } from "./telas/Inicio";
+import { PerfilPorArea } from "./telas/PerfilPorArea";
 import { TelaResultado } from "./telas/TelaResultado";
 
-type Tela = { nome: "inicio" } | { nome: "incluir" } | { nome: "resultado"; id: string };
+type Tela =
+  | { nome: "inicio" }
+  | { nome: "incluir" }
+  | { nome: "resultado"; id: string }
+  | { nome: "corrigir"; id: string }
+  | { nome: "foco"; area: Area };
 
 /** Sem rotas no navegador: a tela é um estado. O cookie de sessão decide se há alguém logado. */
 export function App() {
@@ -30,29 +36,42 @@ export function App() {
   }
 
   const inicio = () => setTela({ nome: "inicio" });
+  const resultado = (id: string) => setTela({ nome: "resultado", id });
   return (
     <main className="app">
       {tela.nome === "inicio" && (
         <Inicio
           usuario={eu.data}
           aoIncluir={() => setTela({ nome: "incluir" })}
-          aoAbrir={(id) => setTela({ nome: "resultado", id })}
+          aoAbrir={resultado}
+          aoVerFoco={(area) => setTela({ nome: "foco", area })}
           aoSair={() => {
             cliente.clear();
             void cliente.invalidateQueries({ queryKey: ["eu"] });
           }}
         />
       )}
-      {tela.nome === "incluir" && (
-        <Incluir aoVoltar={inicio} aoGravar={(id) => setTela({ nome: "resultado", id })} />
+      {tela.nome === "incluir" && <Incluir aoVoltar={inicio} aoGravar={resultado} />}
+      {tela.nome === "corrigir" && (
+        <Corrigir id={tela.id} aoVoltar={() => resultado(tela.id)} aoSalvar={resultado} />
       )}
+      {tela.nome === "foco" && <PerfilPorArea area={tela.area} aoVoltar={inicio} />}
       {tela.nome === "resultado" && (
         <TelaResultado
           id={tela.id}
           aoVoltar={inicio}
+          aoCorrigir={() => setTela({ nome: "corrigir", id: tela.id })}
           aoIncluirOutra={() => setTela({ nome: "incluir" })}
         />
       )}
     </main>
   );
+}
+
+/** Carrega a prova gravada e abre o formulário já preenchido com ela. */
+function Corrigir(props: { id: string; aoVoltar: () => void; aoSalvar: (id: string) => void }) {
+  const prova = useQuery({ queryKey: ["prova", props.id], queryFn: () => api.prova(props.id) });
+  if (prova.isPending) return <p className="carregando">Carregando…</p>;
+  if (prova.isError) return <p className="erro">{prova.error.message}</p>;
+  return <Incluir edicao={prova.data} aoVoltar={props.aoVoltar} aoGravar={props.aoSalvar} />;
 }

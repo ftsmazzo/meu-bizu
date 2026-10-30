@@ -1,21 +1,27 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { api, type Usuario } from "../api";
+import { api, type Area, type Usuario } from "../api";
 import { dataCurta, tituloDaProva } from "../rotulos";
+import { Evolucao } from "./Evolucao";
 
 interface Props {
   usuario: Usuario;
   aoIncluir: () => void;
   aoAbrir: (id: string) => void;
+  aoVerFoco: (area: Area) => void;
   aoSair: () => void;
 }
 
-export function Inicio({ usuario, aoIncluir, aoAbrir, aoSair }: Props) {
+export function Inicio({ usuario, aoIncluir, aoAbrir, aoVerFoco, aoSair }: Props) {
   const cliente = useQueryClient();
   const provas = useQuery({ queryKey: ["provas"], queryFn: api.provas });
+  const perfil = useQuery({ queryKey: ["perfil"], queryFn: () => api.perfil(null) });
   const excluir = useMutation({
     mutationFn: api.excluirProva,
-    onSuccess: () => cliente.invalidateQueries({ queryKey: ["provas"] }),
+    onSuccess: () => {
+      void cliente.invalidateQueries({ queryKey: ["provas"] });
+      void cliente.invalidateQueries({ queryKey: ["perfil"] });
+    },
   });
   const sair = useMutation({ mutationFn: api.sair, onSuccess: aoSair });
 
@@ -32,6 +38,8 @@ export function Inicio({ usuario, aoIncluir, aoAbrir, aoSair }: Props) {
         Incluir resultado
       </button>
 
+      {perfil.data && <Evolucao areas={perfil.data.areas} aoVerFoco={aoVerFoco} />}
+
       <h2>Suas provas</h2>
       {provas.isPending && <p className="carregando">Carregando…</p>}
       {provas.isError && <p className="erro">{provas.error.message}</p>}
@@ -41,7 +49,7 @@ export function Inicio({ usuario, aoIncluir, aoAbrir, aoSair }: Props) {
         </p>
       )}
       <ul className="lista">
-        {provas.data?.map((p) => (
+        {[...(provas.data ?? [])].reverse().map((p) => (
           <li key={p.id} className="cartao">
             <div>
               <strong>{tituloDaProva(p)}</strong>
@@ -49,6 +57,7 @@ export function Inicio({ usuario, aoIncluir, aoAbrir, aoSair }: Props) {
                 {p.acertos !== null && p.avaliadas !== null
                   ? ` · ${p.acertos} de ${p.avaliadas} acertos`
                   : " · sem correção"}
+                {p.nota_estimada !== null ? ` · nota estimada ${Math.round(p.nota_estimada)}` : ""}
                 {p.feita_em ? ` · ${dataCurta(p.feita_em)}` : ""}
               </span>
             </div>

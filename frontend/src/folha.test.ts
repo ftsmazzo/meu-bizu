@@ -1,4 +1,11 @@
-import { avisos, folhaEmTexto, marcaDaTecla, resumo, type Folha } from "./folha";
+import { avisos, folhaDeTexto, folhaEmTexto, marcaDaTecla, resumo, type Folha } from "./folha";
+
+describe("folhaDeTexto", () => {
+  it("abre o texto gravado e volta igual", () => {
+    expect(folhaDeTexto("A.*e")).toEqual(["A", ".", "*", "E"]);
+    expect(folhaEmTexto(folhaDeTexto("AB.*"))).toBe("AB.*");
+  });
+});
 
 describe("marcaDaTecla", () => {
   it("aceita A-E em qualquer caixa, ponto para branco e asterisco para dupla", () => {

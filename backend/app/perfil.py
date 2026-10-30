@@ -30,6 +30,7 @@ class Avaliacao:
     respostas: dict[int, str]
     itens: dict[int, dict] = field(default_factory=dict)
     esperado: dict[int, float] = field(default_factory=dict)
+    nota_estimada: float | None = None  # pela TRI a partir dos acertos, comparável entre provas
 
 
 def decil_da_nota(cortes: list[dict], nota: float) -> int:

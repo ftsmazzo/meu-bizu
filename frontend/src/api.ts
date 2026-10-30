@@ -50,6 +50,7 @@ export interface Resumo {
   tipo: Tipo;
   feita_em: string | null;
   nota: number | null;
+  nota_estimada: number | null;
   acertos: number | null;
   avaliadas: number | null;
   anuladas: number | null;
@@ -59,6 +60,21 @@ export interface Resumo {
 }
 
 export interface Resultado extends Resumo {
+  folha: string;
+  habilidades: LinhaPerfil[];
+}
+
+export interface ResumoArea {
+  area: Area;
+  provas: number;
+  ultima: number | null;
+  anterior: number | null;
+  variacao: number | null;
+}
+
+export interface Perfil {
+  provas: Resumo[];
+  areas: ResumoArea[];
   habilidades: LinhaPerfil[];
 }
 
@@ -130,5 +146,7 @@ export const api = {
   gravarProva: (prova: NovaProva) => pedir<Resultado>("/provas", "POST", prova),
   provas: () => pedir<Resumo[]>("/provas"),
   prova: (id: string) => pedir<Resultado>(`/provas/${id}`),
+  editarProva: (id: string, prova: NovaProva) => pedir<Resultado>(`/provas/${id}`, "PUT", prova),
   excluirProva: (id: string) => pedir<void>(`/provas/${id}`, "DELETE"),
+  perfil: (area: Area | null) => pedir<Perfil>(area ? `/perfil?area=${area}` : "/perfil"),
 };

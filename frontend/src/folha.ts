@@ -28,6 +28,11 @@ export function folhaEmTexto(folha: Folha): string {
   return folha.join("");
 }
 
+/** O inverso de `folhaEmTexto`: abre a folha gravada para o aluno corrigir. */
+export function folhaDeTexto(texto: string): Folha {
+  return [...texto].map((c) => marcaDaTecla(c));
+}
+
 /** Sinais de que a folha foi preenchida errado (não impedem gravar, só pedem conferência). */
 export function avisos(folha: Folha): string[] {
   const { marcadas, brancos } = resumo(folha);

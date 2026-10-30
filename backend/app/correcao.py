@@ -52,12 +52,29 @@ def avaliar_prova(
         raise ProvaInvalida(str(erro)) from erro
     base = {"ano": ano, "area": area, "co_prova": co_prova, "respostas": respostas}
     estatisticas = repositorio.estatisticas(conn, ano, area)
+    parametros = repositorio.parametros_tri(conn, ano, area)
+    gabaritos = {i["co_item"]: i["gabarito"] for i in itens_caderno}
+    av = None
     if cad["tem_respondentes"] and any(co in estatisticas for co in respostas):
         por_decil = repositorio.esperado_por_decil(conn, ano, list(respostas))
         if por_decil:
-            return _por_decil(conn, base, estatisticas, por_decil, nota)
-    gabaritos = {i["co_item"]: i["gabarito"] for i in itens_caderno}
-    return _por_tri(conn, base, gabaritos, nota)
+            av = _por_decil(conn, base, estatisticas, por_decil, nota)
+    if av is None:
+        av = _por_tri(base, gabaritos, nota, parametros)
+    av.nota_estimada = _nota_estimada(parametros, gabaritos, respostas)
+    return av
+
+
+def _nota_estimada(parametros: dict[int, dict], gabaritos: dict[int, str], respostas: dict):
+    """Nota pela TRI a partir dos acertos, a mesma conta para provas com decil e sem ele: é o eixo
+    que permite comparar provas de anos diferentes. Vazia quando acertar tudo ou nada, pois aí a
+    TRI não separa a nota (só dá piso ou teto) e prometeria precisão que não existe."""
+    avaliadas = [co for co in respostas if co in parametros and gabaritos.get(co) in LETRAS]
+    acertos = sum(respostas[co] == gabaritos[co] for co in avaliadas)
+    if acertos == 0 or acertos == len(avaliadas):
+        return None
+    abc = [(parametros[co]["a"], parametros[co]["b"], parametros[co]["c"]) for co in avaliadas]
+    return nota_por_acertos(abc, acertos)
 
 
 def _por_decil(conn, base, estatisticas, por_decil, nota) -> Avaliacao:
@@ -83,8 +100,7 @@ def _por_decil(conn, base, estatisticas, por_decil, nota) -> Avaliacao:
     )
 
 
-def _por_tri(conn, base, gabaritos, nota) -> Avaliacao:
-    parametros = repositorio.parametros_tri(conn, base["ano"], base["area"])
+def _por_tri(base, gabaritos, nota, parametros) -> Avaliacao:
     avaliadas = {
         co: m
         for co, m in base["respostas"].items()

@@ -38,5 +38,13 @@ export function explicarReferencia(p: Pick<Resumo, "referencia" | "nota">): stri
     : "Sem a nota, comparamos pelos seus acertos com quem teve desempenho parecido.";
 }
 
+/** Variação da nota estimada entre as duas últimas provas da área, em palavras. */
+export function frasePontos(variacao: number): string {
+  const pontos = Math.round(Math.abs(variacao));
+  if (pontos === 0) return "Ficou igual à prova anterior";
+  const unidade = pontos === 1 ? "ponto" : "pontos";
+  return `${variacao > 0 ? "Subiu" : "Caiu"} ${pontos} ${unidade} desde a prova anterior`;
+}
+
 /** Uma casa decimal, vírgula. */
 export const decimal = (n: number) => n.toFixed(1).replace(".", ",");

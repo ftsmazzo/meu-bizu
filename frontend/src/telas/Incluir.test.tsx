@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 
+import type { Resultado } from "../api";
 import { Incluir } from "./Incluir";
 
 const QUESTOES = [1, 2, 3].map((numero) => ({
@@ -53,6 +54,7 @@ beforeEach(() => {
       if (url === "/anos/2023/areas/MT/cadernos") return resposta(CADERNOS);
       if (url.startsWith("/cadernos/1211/questoes")) return resposta(QUESTOES);
       if (url === "/provas" && metodo === "POST") return resposta(RESULTADO, 201);
+      if (url === "/provas/p1" && metodo === "PUT") return resposta(RESULTADO);
       return resposta({ detail: "não encontrado" }, 404);
     }),
   );
@@ -142,6 +144,39 @@ describe("Incluir resultado", () => {
 
     const envio = chamadas.find((c) => c.metodo === "POST")?.corpo as Record<string, unknown>;
     expect(envio).toMatchObject({ tipo: "simulado", feita_em: "2026-03-10", nota: 612.5 });
+  });
+
+  it("corrige uma prova gravada: abre preenchida, manda PUT e não mexe no rascunho", async () => {
+    const user = userEvent.setup();
+    const aoGravar = vi.fn();
+    const gravada = {
+      ...RESULTADO,
+      lingua: null,
+      tipo: "enem",
+      feita_em: null,
+      nota: 612.5,
+      folha: "AB.",
+    } as unknown as Resultado;
+    montar(<Incluir edicao={gravada} aoVoltar={vi.fn()} aoGravar={aoGravar} />);
+
+    expect(screen.getByRole("heading", { name: "Corrigir prova" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText(/Caderno/)).toHaveValue("1211"));
+    expect(screen.getByLabelText(/Nota/)).toHaveValue("612,5");
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    const grade = await screen.findByRole("group", { name: "Respostas" });
+    expect(within(grade).getByRole("button", { name: "Questão 2, alternativa B" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await user.click(within(grade).getByRole("button", { name: "Questão 3, alternativa C" }));
+    await user.click(screen.getByRole("button", { name: "Conferir" }));
+    await user.click(screen.getByRole("button", { name: "Salvar correção" }));
+
+    const envio = chamadas.find((c) => c.metodo === "PUT");
+    expect(envio?.corpo).toMatchObject({ co_prova: 1211, nota: 612.5, folha: "ABC" });
+    expect(chamadas.some((c) => c.metodo === "POST")).toBe(false);
+    expect(aoGravar).toHaveBeenCalledWith("p1");
+    expect(localStorage.getItem("bizu:rascunho")).toBeNull();
   });
 
   it("guarda o rascunho no navegador e retoma de onde parou", async () => {

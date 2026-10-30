@@ -71,6 +71,7 @@ class Resumo(BaseModel):
     tipo: str
     feita_em: date | None
     nota: float | None
+    nota_estimada: float | None = None
     acertos: int | None = None
     avaliadas: int | None = None
     anuladas: int | None = None
@@ -80,11 +81,21 @@ class Resumo(BaseModel):
 
 
 class Resultado(Resumo):
+    folha: str  # o que o aluno marcou (nunca o gabarito): serve para ele corrigir a prova
     habilidades: list[LinhaPerfil]
+
+
+class ResumoArea(BaseModel):
+    area: str
+    provas: int
+    ultima: float | None  # nota estimada da prova mais recente com nota
+    anterior: float | None
+    variacao: float | None  # ultima - anterior; vazia com menos de duas provas com nota
 
 
 class Perfil(BaseModel):
     provas: list[Resumo]
+    areas: list[ResumoArea]
     habilidades: list[LinhaPerfil]
 
 
@@ -105,8 +116,37 @@ def _resumo(p: dict, av: Avaliacao | None) -> Resumo:
     dados["nota"] = p["nota"]
     if av is not None:
         dados |= {k: getattr(av, k) for k in ("acertos", "avaliadas", "anuladas", "referencia")}
-        dados |= {"origem": av.origem, "decil": av.decil}
+        dados |= {"origem": av.origem, "decil": av.decil, "nota_estimada": av.nota_estimada}
     return Resumo(**dados)
+
+
+def _resultado(conn, p: dict, av: Avaliacao | None) -> Resultado:
+    habilidades = _linhas(conn, [av]) if av else []
+    return Resultado(**_resumo(p, av).model_dump(), folha=p["folha"], habilidades=habilidades)
+
+
+def _areas(resumos: list[Resumo]) -> list[ResumoArea]:
+    """Uma linha por área, com a variação da nota estimada entre as duas provas mais recentes.
+    `resumos` já vêm da mais antiga para a mais nova."""
+    saida = []
+    for area in ("LC", "CH", "CN", "MT"):
+        da_area = [r for r in resumos if r.area == area]
+        if not da_area:
+            continue
+        notas = [r.nota_estimada for r in da_area if r.nota_estimada is not None]
+        ultima = notas[-1] if notas else None
+        anterior = notas[-2] if len(notas) > 1 else None
+        variacao = ultima - anterior if ultima is not None and anterior is not None else None
+        saida.append(
+            ResumoArea(
+                area=area,
+                provas=len(da_area),
+                ultima=ultima,
+                anterior=anterior,
+                variacao=variacao,
+            )
+        )
+    return saida
 
 
 def _linhas(conn, avaliacoes: list[Avaliacao]) -> list[LinhaPerfil]:
@@ -136,7 +176,7 @@ def gravar_prova(corpo: ProvaEntrada, sessao: Sessao) -> Resultado:
         raise HTTPException(erro.status, str(erro)) from None
     p = provas.inserir(conn, **dados)
     provas.auditar(conn, "criar_prova", p["id"], {"ano": p["ano"], "area": p["area"]})
-    return Resultado(**_resumo(p, av).model_dump(), habilidades=_linhas(conn, [av]))
+    return _resultado(conn, p, av)
 
 
 @router.get("/provas")
@@ -149,9 +189,33 @@ def ver_prova(prova_id: UUID, sessao: Sessao) -> Resultado:
     p = provas.obter(sessao.conn, prova_id)
     if p is None:
         raise HTTPException(404, "prova não encontrada")
-    av = _corrigir(sessao.conn, p)
-    habilidades = _linhas(sessao.conn, [av]) if av else []
-    return Resultado(**_resumo(p, av).model_dump(), habilidades=habilidades)
+    return _resultado(sessao.conn, p, _corrigir(sessao.conn, p))
+
+
+def _instantaneo(p: dict) -> dict:
+    """O que a auditoria guarda de uma prova: tudo o que o aluno informou, com a data em texto."""
+    campos = ("ano", "area", "co_prova", "lingua", "tipo", "feita_em", "nota", "folha")
+    return {k: p[k].isoformat() if isinstance(p[k], date) else p[k] for k in campos}
+
+
+@router.put("/provas/{prova_id}")
+def editar_prova(prova_id: UUID, corpo: ProvaEntrada, sessao: Sessao) -> Resultado:
+    conn = sessao.conn
+    antes = provas.obter(conn, prova_id)
+    if antes is None:
+        raise HTTPException(404, "prova não encontrada")
+    dados = corpo.model_dump()
+    if corpo.area != "LC":
+        dados["lingua"] = None
+    try:
+        av = _avaliar(conn, dados)
+    except ProvaInvalida as erro:
+        raise HTTPException(erro.status, str(erro)) from None
+    p = provas.atualizar(conn, prova_id, **dados)
+    provas.auditar(
+        conn, "editar_prova", prova_id, {"antes": _instantaneo(antes), "depois": _instantaneo(p)}
+    )
+    return _resultado(conn, p, av)
 
 
 @router.delete("/provas/{prova_id}", status_code=204)
@@ -170,6 +234,5 @@ def perfil(
     conn = sessao.conn
     corrigidas = [(p, _corrigir(conn, p)) for p in provas.listar(conn, area, desde)]
     avaliacoes = [av for _, av in corrigidas if av is not None]
-    return Perfil(
-        provas=[_resumo(p, av) for p, av in corrigidas], habilidades=_linhas(conn, avaliacoes)
-    )
+    resumos = [_resumo(p, av) for p, av in corrigidas]
+    return Perfil(provas=resumos, areas=_areas(resumos), habilidades=_linhas(conn, avaliacoes))

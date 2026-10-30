@@ -55,6 +55,29 @@ def obter(conn: psycopg.Connection, prova_id) -> dict | None:
         return cur.fetchone()
 
 
+def atualizar(
+    conn: psycopg.Connection,
+    prova_id,
+    *,
+    ano: int,
+    area: str,
+    co_prova: int,
+    lingua: int | None,
+    tipo: str,
+    feita_em: date | None,
+    nota: float | None,
+    folha: str,
+) -> dict | None:
+    """Troca os dados de uma prova do usuário da sessão; None se ela não existe (ou é de outro)."""
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            "update app.prova set ano = %s, area = %s, co_prova = %s, lingua = %s, tipo = %s, "
+            f"feita_em = %s, nota = %s, folha = %s where id = %s returning {COLUNAS}",
+            (ano, area, co_prova, lingua, tipo, feita_em, nota, folha, prova_id),
+        )
+        return cur.fetchone()
+
+
 def excluir(conn: psycopg.Connection, prova_id) -> bool:
     achou = conn.execute("delete from app.prova where id = %s returning id", (prova_id,))
     return achou.fetchone() is not None

@@ -219,6 +219,108 @@ def test_perfil_junta_provas_e_filtra_por_area(novo_cliente):
     assert ana.get("/perfil", params={"area": "XX"}).status_code == 422
 
 
+# ---------------------------------------------------------------- nota estimada e edição
+
+
+def test_nota_estimada_sai_dos_acertos_e_nao_depende_da_nota_informada(novo_cliente):
+    ana = novo_cliente()
+    _cadastrar(ana)
+    sem_nota = ana.post("/provas", json=_prova(folha="AAA")).json()
+    com_nota = ana.post("/provas", json=_prova(folha="AAA", nota=345.0)).json()
+    assert 200 < sem_nota["nota_estimada"] < 1000
+    assert com_nota["nota_estimada"] == pytest.approx(sem_nota["nota_estimada"])
+    assert com_nota["decil"] == 1 and sem_nota["decil"] != com_nota["decil"]
+
+
+def test_nota_estimada_sobe_com_os_acertos(novo_cliente):
+    ana = novo_cliente()
+    _cadastrar(ana)
+    um = ana.post("/provas", json=_prova(folha="AAA")).json()["nota_estimada"]
+    dois = ana.post("/provas", json=_prova(folha="ABA")).json()["nota_estimada"]
+    assert dois > um
+
+
+def test_nota_estimada_fica_vazia_quando_a_tri_nao_separa(novo_cliente):
+    ana = novo_cliente()
+    _cadastrar(ana)
+    assert ana.post("/provas", json=_prova(folha="ABC")).json()["nota_estimada"] is None  # tudo
+    assert ana.post("/provas", json=_prova(folha="...")).json()["nota_estimada"] is None  # nada
+
+
+def test_nota_estimada_tambem_vale_no_caderno_sem_respondentes(novo_cliente):
+    ana = novo_cliente()
+    _cadastrar(ana)
+    r = ana.post("/provas", json=_prova(area="LC", co_prova=20, lingua=0, folha="AA")).json()
+    assert r["referencia"] == "tri" and 200 < r["nota_estimada"] < 1000
+
+
+def test_editar_prova_recalcula_e_audita(conn, novo_cliente):
+    ana = novo_cliente()
+    _cadastrar(ana)
+    criada = ana.post("/provas", json=_prova(folha="AAA")).json()
+    r = ana.put(f"/provas/{criada['id']}", json=_prova(folha="ABA", nota=345.0))
+    assert r.status_code == 200, r.text
+    corpo = r.json()
+    assert corpo["id"] == criada["id"] and corpo["nota"] == 345.0
+    assert corpo["nota_estimada"] > criada["nota_estimada"]
+    assert ana.get(f"/provas/{criada['id']}").json()["nota_estimada"] == corpo["nota_estimada"]
+    assert len(ana.get("/provas").json()) == 1
+    acoes = [a for (a,) in conn.execute("select acao from app.auditoria order by id")]
+    assert acoes == ["criar_prova", "editar_prova"]
+    (detalhe,) = conn.execute("select detalhe from app.auditoria where acao = 'editar_prova'")
+    assert detalhe[0]["antes"]["folha"] == "AAA" and detalhe[0]["depois"]["folha"] == "ABA"
+
+
+def test_ver_prova_devolve_a_folha_do_proprio_aluno_para_editar(novo_cliente):
+    ana = novo_cliente()
+    _cadastrar(ana)
+    criada = ana.post("/provas", json=_prova(folha="a.*")).json()
+    assert criada["folha"] == "A.*"
+    assert ana.get(f"/provas/{criada['id']}").json()["folha"] == "A.*"
+    assert "folha" not in ana.get("/provas").json()[0]  # a lista fica leve
+
+
+def test_editar_com_dado_invalido_nao_muda_nada(novo_cliente):
+    ana = novo_cliente()
+    _cadastrar(ana)
+    criada = ana.post("/provas", json=_prova(folha="AAA")).json()
+    for ruim in ({"folha": "AB"}, {"co_prova": 8}, {"co_prova": 999}, {"folha": "ABX"}):
+        r = ana.put(f"/provas/{criada['id']}", json=_prova(**ruim))
+        assert r.status_code in (404, 409, 422)
+    depois = ana.get(f"/provas/{criada['id']}").json()
+    assert depois["acertos"] == criada["acertos"]
+    assert ana.put(f"/provas/{criada['id']}", json={}).status_code == 422
+
+
+def test_editar_exige_login_e_prova_de_outro_da_404(conn, novo_cliente):
+    ana, bruno = novo_cliente(), novo_cliente()
+    _cadastrar(ana)
+    _cadastrar(bruno, email="bruno@exemplo.com", nome="Bruno")
+    da_ana = ana.post("/provas", json=_prova(folha="AAA")).json()["id"]
+    assert novo_cliente().put(f"/provas/{da_ana}", json=_prova()).status_code == 401
+    assert bruno.put(f"/provas/{da_ana}", json=_prova(folha="ABC")).status_code == 404
+    assert ana.get(f"/provas/{da_ana}").json()["acertos"] == 1  # a folha da Ana não mudou
+    assert bruno.get("/provas").json() == []
+    acoes = [a for (a,) in conn.execute("select acao from app.auditoria")]
+    assert "editar_prova" not in acoes
+
+
+def test_perfil_resume_cada_area_com_a_variacao_da_nota(novo_cliente):
+    ana = novo_cliente()
+    _cadastrar(ana)
+    ana.post("/provas", json=_prova(folha="AAA", tipo="simulado", feita_em="2025-01-10"))
+    ana.post("/provas", json=_prova(folha="ABA", tipo="simulado", feita_em="2025-02-10"))
+    ana.post("/provas", json=_prova(area="LC", co_prova=20, lingua=0, folha="AA"))
+    areas = {a["area"]: a for a in ana.get("/perfil").json()["areas"]}
+    assert set(areas) == {"MT", "LC"}
+    mt = areas["MT"]
+    assert mt["provas"] == 2 and mt["ultima"] > mt["anterior"]
+    assert mt["variacao"] == pytest.approx(mt["ultima"] - mt["anterior"])
+    assert areas["LC"]["provas"] == 1 and areas["LC"]["variacao"] is None
+    so_lc = ana.get("/perfil", params={"area": "LC"}).json()["areas"]
+    assert [a["area"] for a in so_lc] == ["LC"]
+
+
 # ---------------------------------------------------------------- isolamento (RLS)
 
 
@@ -231,7 +333,7 @@ def test_aluno_nao_ve_nem_apaga_prova_de_outro(novo_cliente):
     assert bruno.get("/provas").json() == []
     assert bruno.get(f"/provas/{da_ana}").status_code == 404
     assert bruno.delete(f"/provas/{da_ana}").status_code == 404
-    assert bruno.get("/perfil").json() == {"provas": [], "habilidades": []}
+    assert bruno.get("/perfil").json() == {"provas": [], "areas": [], "habilidades": []}
 
     assert ana.get(f"/provas/{da_ana}").status_code == 200  # a da Ana continua lá
     assert len(ana.get("/provas").json()) == 1
