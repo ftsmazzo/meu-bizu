@@ -77,6 +77,28 @@ def test_raiox_real_cobre_as_quatro_areas_de_2023(cliente):
     print(areas["MT"]["foco"][:3])
 
 
+def test_ranking_real_por_estado_e_municipio_em_2023(cliente):
+    logado = TestClient(app, base_url="https://testserver")
+    cadastro = {"email": "g@exemplo.com", "nome": "G", "maior_de_18": True}
+    logado.post(
+        "/conta/cadastro", json=cadastro | {"senha": "uma-senha-boa-123"}
+    ).raise_for_status()
+    ufs = {u["uf"]: u["n"] for u in logado.get("/geo/ufs", params={"ano": 2023}).json()}
+    assert len(ufs) == 27 and ufs["SP"] > ufs["AC"] > 0
+    municipios = logado.get("/geo/municipios", params={"ano": 2023, "uf": "SP"}).json()
+    sao_paulo = next(m for m in municipios if m["nome"] == "São Paulo")  # acento preservado
+    assert sao_paulo["codigo"] == "3550308" and sao_paulo["n"] > 50000
+    corpo = {"ano": 2023, "notas": {"MT": 640}, "uf": "SP", "municipio": "3550308"}
+    (mt,) = logado.post("/raio-x", json=corpo).json()["areas"]
+    for local in (mt["brasil"], mt["uf"], mt["municipio"]):
+        assert local and 0 <= local["a_frente_de"] <= 95 and local["n"] > 50
+    assert mt["brasil"]["n"] > mt["uf"]["n"] > mt["municipio"]["n"]
+    # a mesma nota, em locais diferentes, ocupa posições diferentes (o ranking não é de enfeite)
+    ac = logado.post("/raio-x", json={"ano": 2023, "notas": {"MT": 640}, "uf": "AC"}).json()
+    assert ac["areas"][0]["uf"]["a_frente_de"] != mt["uf"]["a_frente_de"]
+    print(mt["brasil"], mt["uf"], mt["municipio"], ac["areas"][0]["uf"])
+
+
 def test_cadernos_ambiguos_de_2020_ficam_bloqueados(cliente):
     cadernos = cliente.get("/anos/2020/areas/LC/cadernos").json()
     ambiguos = [c for c in cadernos if not c["selecionavel"] and "ambíguo" in c["motivo"]]

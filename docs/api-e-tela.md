@@ -104,9 +104,22 @@ alcance e difíceis, as habilidades em que mais se ganha ao subir um degrau (`fo
 questões ao alcance, com o texto (nunca o gabarito). A chance de cada questão é o acerto
 **observado** do grupo do aluno; sem dado observado cai na TRI. Itens anulados ou sem parâmetro não
 contam. É uma leitura descritiva ("o que costuma acontecer com quem tem a sua nota"), não um
-diagnóstico das respostas. Ainda falta o ranking por estado e município (exige exportar agregados
-do laboratório) e a coerência por resposta (exige as marcações). Link do INEP para consultar a nota:
-`https://enem.inep.gov.br/participante/` (o produto nunca pede a senha do gov.br).
+diagnóstico das respostas. Link do INEP para consultar a nota:
+`https://enem.inep.gov.br/participante/` (o produto nunca pede a senha do gov.br). Falta a
+coerência por resposta (exige as marcações).
+
+**Ranking por estado e município:** `POST /raio-x` aceita `uf` (sigla) e `municipio` (código IBGE de
+7 dígitos) e devolve, por área, `brasil`, `uf` e `municipio` como `{nome, a_frente_de, n}`:
+a nota supera **pelo menos** `a_frente_de`% de `n` participantes (o maior marco de 5 em 5 que ela
+já alcançou; nunca arredonda para cima; 0 abaixo do percentil 5 e 95 acima do 95). Local sem dado
+suficiente vem `null`. As listas para o formulário são `GET /geo/ufs?ano=` e
+`GET /geo/municipios?ano=&uf=`. Os dados vêm de `ref.nota_geo` (migração 004): 19 percentis por
+(ano, área, Brasil/UF/município), exportados pelo laboratório com
+`python -m enem_simulador.exportar_geo` (arquivo `nota_geo.csv` da exportação), com a mesma população
+do `decil_nota`. Só agregados; estado com menos de 30 e município com menos de 50 participantes não
+são exportados. UF e município são os do **local da prova**: os microdados do INEP não trazem o de
+residência. A carga no servidor é `python -m app.carga_ref` (substitui toda a base `ref`) depois de
+`python -m app.migrar`.
 
 **F5 (código pronto):** `POST /relatorio?area=` (sem `area` = todas). Fluxo: monta os fatos do
 perfil (áreas, nota estimada, variação e até 3 habilidades com sinal de lacuna por área, com

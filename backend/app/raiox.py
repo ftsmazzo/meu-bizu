@@ -14,6 +14,13 @@ MAX_FOCO = 8
 MAX_ALCANCE = 5
 
 
+def a_frente_de(nota: float, pontos: list[float]) -> int:
+    """Quantos % dos participantes de um local a nota supera, pelo menos. `pontos` são os 19
+    percentis (5%, 10%, ..., 95%): vale o maior que a nota já alcançou, sem arredondar para cima.
+    Abaixo do percentil 5 devolve 0 e acima do 95 devolve 95, pois a ponta não é exportada."""
+    return 5 * sum(p <= nota for p in pontos)
+
+
 def _proximo_degrau(cortes: list[dict], decil: int) -> float | None:
     """Meio do decil seguinte (entre o teto dele e o teto do decil seguinte a ele)."""
     teto = {c["decil"]: c["nota_max"] for c in cortes}

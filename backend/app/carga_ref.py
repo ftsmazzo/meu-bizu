@@ -19,6 +19,7 @@ TABELAS = (
     "item_estatistica",
     "item_esperado",
     "decil_nota",
+    "nota_geo",
 )
 
 

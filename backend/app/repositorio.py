@@ -83,6 +83,38 @@ def cortes(conn: psycopg.Connection, ano: int, area: str) -> list[dict]:
         return cur.fetchall()
 
 
+def ufs_com_dados(conn: psycopg.Connection, ano: int) -> list[dict]:
+    """Estados com ranking no ano (a lista vem de Matemática; as áreas têm quase o mesmo n)."""
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            "select codigo as uf, n from ref.nota_geo "
+            "where ano = %s and area = 'MT' and nivel = 'UF' order by codigo",
+            (ano,),
+        )
+        return cur.fetchall()
+
+
+def municipios_com_dados(conn: psycopg.Connection, ano: int, uf: str) -> list[dict]:
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            "select codigo, nome, n from ref.nota_geo "
+            "where ano = %s and area = 'MT' and nivel = 'MUN' and uf = %s order by nome",
+            (ano, uf),
+        )
+        return cur.fetchall()
+
+
+def nota_geo(conn: psycopg.Connection, ano: int, area: str, nivel: str, codigo: str) -> dict | None:
+    """Percentis da nota de um local ({nome, n, pontos}); None se não há dado suficiente."""
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            "select nome, n, pontos from ref.nota_geo "
+            "where ano = %s and area = %s and nivel = %s and codigo = %s",
+            (ano, area, nivel, codigo),
+        )
+        return cur.fetchone()
+
+
 def parametros_tri(conn: psycopg.Connection, ano: int, area: str) -> dict[int, dict]:
     """Itens com parâmetros da TRI (não abandonados), por co_item."""
     with conn.cursor(row_factory=dict_row) as cur:

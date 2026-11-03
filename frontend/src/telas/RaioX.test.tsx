@@ -8,6 +8,9 @@ import { frasePosicao } from "./RaioXPainel";
 const MT = {
   area: "MT",
   nota: 640,
+  brasil: { nome: "Brasil", a_frente_de: 70, n: 1000000 },
+  uf: { nome: "SP", a_frente_de: 65, n: 150000 },
+  municipio: { nome: "São Paulo", a_frente_de: 60, n: 30000 },
   decil: 8,
   a_frente_de: 70,
   alvo: 690,
@@ -40,6 +43,14 @@ beforeEach(() => {
     "fetch",
     vi.fn(async (url: string, init?: RequestInit) => {
       if (url === "/anos") return new Response(JSON.stringify([2022, 2023]));
+      if (url === "/geo/ufs?ano=2023") {
+        return new Response(JSON.stringify([{ uf: "RJ", n: 90000 }, { uf: "SP", n: 150000 }]));
+      }
+      if (url === "/geo/municipios?ano=2023&uf=SP") {
+        return new Response(
+          JSON.stringify([{ codigo: "3550308", nome: "São Paulo", n: 30000 }]),
+        );
+      }
       if (url === "/raio-x") {
         corpos.push(JSON.parse(String(init?.body)));
         return new Response(JSON.stringify({ ano: 2023, areas: [MT] }));
@@ -96,7 +107,9 @@ describe("Raio-X pela nota", () => {
     await user.type(screen.getByLabelText("Matemática"), "640,5");
     await user.click(screen.getByRole("button", { name: "Ver meu Raio-X" }));
 
-    expect(corpos).toEqual([{ ano: 2023, notas: { MT: 640.5 }, lingua: null }]);
+    expect(corpos).toEqual([
+      { ano: 2023, notas: { MT: 640.5 }, lingua: null, uf: null, municipio: null },
+    ]);
     expect(
       await screen.findByRole("heading", { name: "Seu Raio-X do Enem 2023" }),
     ).toBeInTheDocument();
@@ -107,6 +120,31 @@ describe("Raio-X pela nota", () => {
     expect(screen.getByText("+0,5")).toBeInTheDocument();
     const alcance = screen.getByText(/62% de chance/).closest("li") as HTMLElement;
     expect(within(alcance).getByText("Quanto é 2+2?")).toBeInTheDocument();
+  });
+
+  it("escolhe estado e município, manda os códigos e mostra o ranking de cada local", async () => {
+    const user = userEvent.setup();
+    montar();
+    await screen.findByRole("option", { name: "2023" });
+    await user.selectOptions(screen.getByLabelText("Ano do Enem"), "2023");
+    await screen.findByRole("option", { name: "SP" });
+    await user.selectOptions(screen.getByLabelText(/Estado onde você fez a prova/), "SP");
+    await screen.findByRole("option", { name: "São Paulo" });
+    await user.selectOptions(screen.getByLabelText(/Município da prova/), "3550308");
+    await user.type(screen.getByLabelText("Matemática"), "640");
+    await user.click(screen.getByRole("button", { name: "Ver meu Raio-X" }));
+
+    expect(corpos).toEqual([
+      { ano: 2023, notas: { MT: 640 }, lingua: null, uf: "SP", municipio: "3550308" },
+    ]);
+    const ranking = (await screen.findByRole("heading", { name: "Seu ranking" })).closest(
+      "section",
+    ) as HTMLElement;
+    expect(within(ranking).getByText("Brasil")).toBeInTheDocument();
+    expect(within(ranking).getByText("SP")).toBeInTheDocument();
+    expect(within(ranking).getByText("São Paulo")).toBeInTheDocument();
+    expect(within(ranking).getByText("à frente de pelo menos 65%")).toBeInTheDocument();
+    expect(within(ranking).getByText(/150\.000 participantes/)).toBeInTheDocument();
   });
 
   it("não pede senha do gov.br e abre o INEP em outra aba com segurança", () => {

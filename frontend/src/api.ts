@@ -110,9 +110,30 @@ export interface QuestaoAoAlcance {
   } | null;
 }
 
+/** Onde a nota fica num local: supera pelo menos `a_frente_de`% de `n` participantes. */
+export interface Posicao {
+  nome: string;
+  a_frente_de: number;
+  n: number;
+}
+
+export interface UfComDados {
+  uf: string;
+  n: number;
+}
+
+export interface MunicipioComDados {
+  codigo: string;
+  nome: string;
+  n: number;
+}
+
 export interface AreaRaioX {
   area: Area;
   nota: number;
+  brasil: Posicao | null;
+  uf: Posicao | null;
+  municipio: Posicao | null;
   decil: number | null;
   a_frente_de: number | null;
   alvo: number | null;
@@ -132,6 +153,8 @@ export interface PedidoRaioX {
   ano: number;
   notas: Partial<Record<Area, number>>;
   lingua: number | null;
+  uf: string | null;
+  municipio: string | null;
 }
 
 export class ErroApi extends Error {
@@ -193,6 +216,9 @@ export const api = {
   prova: (id: string) => pedir<Resultado>(`/provas/${id}`),
   editarProva: (id: string, prova: NovaProva) => pedir<Resultado>(`/provas/${id}`, "PUT", prova),
   excluirProva: (id: string) => pedir<void>(`/provas/${id}`, "DELETE"),
+  ufs: (ano: number) => pedir<UfComDados[]>(`/geo/ufs?ano=${ano}`),
+  municipios: (ano: number, uf: string) =>
+    pedir<MunicipioComDados[]>(`/geo/municipios?ano=${ano}&uf=${uf}`),
   raioX: (pedido: PedidoRaioX) => pedir<RaioX>("/raio-x", "POST", pedido),
   relatorio: (area: Area | null) =>
     pedir<{ texto: string; origem: "ia" | "padrao" }>(

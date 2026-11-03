@@ -3,7 +3,13 @@ import { useState } from "react";
 import type { AreaRaioX, RaioX } from "../api";
 import { LETRAS } from "../folha";
 import { decimal, estiloArea, nomeDaArea } from "../rotulos";
-import { Anel, BarraFaixas, BarraGrupos, BarrasGanho } from "../ui/graficos";
+import {
+  Anel,
+  BarraFaixas,
+  BarraGrupos,
+  BarraPosicao,
+  BarrasGanho,
+} from "../ui/graficos";
 
 interface Props {
   dados: RaioX;
@@ -130,6 +136,29 @@ function DetalheArea({ a }: { a: AreaRaioX }) {
           </p>
         )}
       </section>
+
+      {a.brasil && (
+        <section className="card largo">
+          <h3>Seu ranking</h3>
+          <ul className="barras">
+            {[a.brasil, a.uf, a.municipio].map(
+              (p) =>
+                p && (
+                  <BarraPosicao
+                    key={p.nome}
+                    rotulo={p.nome}
+                    aFrenteDe={p.a_frente_de}
+                    n={p.n}
+                  />
+                ),
+            )}
+          </ul>
+          <small>
+            Mostramos o piso: “pelo menos X%” é o maior marco de 5 em 5 que a sua
+            nota já alcançou. Estado e município são os do local da prova.
+          </small>
+        </section>
+      )}
 
       <section className="card">
         <h3>O que esperar da prova</h3>

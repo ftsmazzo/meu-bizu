@@ -120,6 +120,26 @@ export function BarraFaixas(props: {
   );
 }
 
+/** Uma linha do ranking: quanto da população do local a nota supera, pelo menos. */
+export function BarraPosicao(props: { rotulo: string; aFrenteDe: number; n: number }) {
+  const texto =
+    props.aFrenteDe === 0
+      ? "entre os 5% de menor nota"
+      : `à frente de pelo menos ${props.aFrenteDe}%`;
+  return (
+    <li className="rank">
+      <div className="rotulo">
+        <span>{props.rotulo}</span>
+        <b>{texto}</b>
+      </div>
+      <div className="trilha" aria-hidden="true">
+        <i style={{ width: `${Math.max(3, props.aFrenteDe)}%` }} />
+      </div>
+      <small>{props.n.toLocaleString("pt-BR")} participantes</small>
+    </li>
+  );
+}
+
 export interface ItemBarra {
   chave: string;
   rotulo: string;

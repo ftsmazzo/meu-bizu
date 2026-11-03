@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
 
 from app import auth, repositorio
-from app.raiox import analisar_area
+from app.raiox import a_frente_de, analisar_area
 from app.rotas_provas import Area
 
 router = APIRouter()
@@ -19,6 +19,8 @@ class RaioXEntrada(BaseModel):
     ano: int = Field(ge=2009, le=2100)
     notas: dict[Area, float]
     lingua: int | None = Field(default=None, ge=0, le=1)
+    uf: str | None = Field(default=None, pattern=r"^[A-Z]{2}$")
+    municipio: str | None = Field(default=None, pattern=r"^\d{7}$")  # código IBGE
 
     @field_validator("notas")
     @classmethod
@@ -59,9 +61,20 @@ class Faixas(BaseModel):
     dificeis: int
 
 
+class Posicao(BaseModel):
+    """Onde a nota fica num local: supera pelo menos `a_frente_de`% de `n` participantes."""
+
+    nome: str
+    a_frente_de: int
+    n: int
+
+
 class AreaRaioX(BaseModel):
     area: Area
     nota: float
+    brasil: Posicao | None
+    uf: Posicao | None
+    municipio: Posicao | None
     decil: int | None
     a_frente_de: int | None
     alvo: float | None
@@ -94,6 +107,16 @@ def _itens_da_prova(conn, ano: int, area: str, lingua: int | None) -> list[dict]
     return list(vistos.values())
 
 
+def _posicao(conn, ano: int, area: str, nivel: str, codigo: str | None, nota: float):
+    """Posição da nota num local, ou None se não foi pedido ou o local não tem dado suficiente."""
+    if codigo is None:
+        return None
+    g = repositorio.nota_geo(conn, ano, area, nivel, codigo)
+    if g is None:
+        return None
+    return Posicao(nome=g["nome"] or "Brasil", a_frente_de=a_frente_de(nota, g["pontos"]), n=g["n"])
+
+
 def _enunciado(t: dict | None) -> Enunciado | None:
     if t is None:
         return None
@@ -124,6 +147,9 @@ def raio_x(corpo: RaioXEntrada, sessao: Sessao) -> RaioX:
             AreaRaioX(
                 area=area,
                 nota=nota,
+                brasil=_posicao(conn, corpo.ano, area, "BR", "0", nota),
+                uf=_posicao(conn, corpo.ano, area, "UF", corpo.uf, nota),
+                municipio=_posicao(conn, corpo.ano, area, "MUN", corpo.municipio, nota),
                 **{k: r[k] for k in ("decil", "a_frente_de", "alvo", "total", "esperado")},
                 faixas=Faixas(**r["faixas"]),
                 foco=[

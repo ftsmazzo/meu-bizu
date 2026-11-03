@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from app.rotas_conta import router as rotas_conta
+from app.rotas_geo import router as rotas_geo
 from app.rotas_provas import router as rotas_provas
 from app.rotas_raiox import router as rotas_raiox
 from app.rotas_referencia import router as rotas_referencia
@@ -18,6 +19,7 @@ app.include_router(rotas_conta)
 app.include_router(rotas_provas)
 app.include_router(rotas_relatorio)
 app.include_router(rotas_raiox)
+app.include_router(rotas_geo)
 
 
 @app.get("/saude")

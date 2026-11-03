@@ -110,7 +110,14 @@ CABECALHOS = {
     ),
     "item_esperado": "ano,co_item,decil,acerto,n",
     "decil_nota": "ano,area,decil,nota_min,nota_max,n",
+    "nota_geo": "ano,area,nivel,codigo,uf,nome,n,pontos",
 }
+
+
+def _pontos(inicio: int, passo: int = 20) -> str:
+    """19 percentis (5% a 95%) crescentes, no formato de array do PostgreSQL."""
+    return "{" + ",".join(str(inicio + passo * i) for i in range(19)) + "}"
+
 
 ALT = '{"A": "um", "B": "dois", "C": "tres", "D": "quatro", "E": "cinco"}'
 
@@ -156,6 +163,16 @@ LINHAS = {
     ],
     "item_esperado": [[2023, 10, d, 0.1 * d, 10] for d in range(1, 11)],
     "decil_nota": [[2023, "MT", d, 300 + 40 * d, 340 + 40 * d, 1000] for d in range(1, 11)],
+    # Brasil, dois estados e um município de MT; só o Brasil em LC (BR e UF/município da fixture
+    # servem para testar posição e "sem dados"). Código vazio de uf/nome vira NULL, como no real.
+    "nota_geo": [
+        [2023, "MT", "BR", "0", "", "", 10000, _pontos(300)],
+        [2023, "MT", "UF", "SP", "SP", "SP", 1000, _pontos(280)],
+        [2023, "MT", "UF", "RJ", "RJ", "RJ", 500, _pontos(320)],
+        [2023, "MT", "MUN", "3550308", "SP", "São Paulo", 300, _pontos(260)],
+        [2023, "MT", "MUN", "3304557", "RJ", "Rio de Janeiro", 200, _pontos(330)],
+        [2023, "LC", "BR", "0", "", "", 10000, _pontos(300)],
+    ],
 }
 
 

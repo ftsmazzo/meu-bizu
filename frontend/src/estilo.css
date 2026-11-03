@@ -717,6 +717,11 @@ summary {
   background: var(--cor-area, var(--marca));
 }
 
+.barras .rank {
+  display: grid;
+  gap: 4px;
+}
+
 .sparkline {
   display: block;
   width: 100%;

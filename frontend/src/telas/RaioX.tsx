@@ -24,8 +24,20 @@ export function RaioX({ aoVoltar, aoIncluirProva }: Props) {
   const [ano, setAno] = useState<number | null>(null);
   const [textos, setTextos] = useState<Partial<Record<Area, string>>>({});
   const [lingua, setLingua] = useState<number | null>(null);
+  const [uf, setUf] = useState("");
+  const [municipio, setMunicipio] = useState("");
 
   const anos = useQuery({ queryKey: ["anos"], queryFn: api.anos });
+  const ufs = useQuery({
+    queryKey: ["ufs", ano],
+    queryFn: () => api.ufs(ano as number),
+    enabled: ano !== null,
+  });
+  const municipios = useQuery({
+    queryKey: ["municipios", ano, uf],
+    queryFn: () => api.municipios(ano as number, uf),
+    enabled: ano !== null && uf !== "",
+  });
   const raiox = useMutation({ mutationFn: api.raioX });
 
   const notas = Object.fromEntries(
@@ -48,6 +60,8 @@ export function RaioX({ aoVoltar, aoIncluirProva }: Props) {
         ano,
         notas,
         lingua: notas.LC !== undefined ? lingua : null,
+        uf: uf || null,
+        municipio: municipio || null,
       });
   }
 
@@ -81,9 +95,11 @@ export function RaioX({ aoVoltar, aoIncluirProva }: Props) {
           Ano do Enem
           <select
             value={ano ?? ""}
-            onChange={(e) =>
-              setAno(e.target.value ? Number(e.target.value) : null)
-            }
+            onChange={(e) => {
+              setAno(e.target.value ? Number(e.target.value) : null);
+              setUf("");
+              setMunicipio("");
+            }}
           >
             <option value="">Escolha…</option>
             {[...(anos.data ?? [])]
@@ -95,6 +111,51 @@ export function RaioX({ aoVoltar, aoIncluirProva }: Props) {
               ))}
           </select>
         </label>
+
+        {ufs.data && ufs.data.length > 0 && (
+          <div className="campos-nota">
+            <label>
+              Estado onde você fez a prova (opcional)
+              <select
+                value={uf}
+                onChange={(e) => {
+                  setUf(e.target.value);
+                  setMunicipio("");
+                }}
+              >
+                <option value="">Não informar</option>
+                {ufs.data.map((u) => (
+                  <option key={u.uf} value={u.uf}>
+                    {u.uf}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {uf !== "" && (
+              <label>
+                Município da prova (opcional)
+                <select
+                  value={municipio}
+                  onChange={(e) => setMunicipio(e.target.value)}
+                  disabled={!municipios.data}
+                >
+                  <option value="">Não informar</option>
+                  {municipios.data?.map((m) => (
+                    <option key={m.codigo} value={m.codigo}>
+                      {m.nome}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
+        )}
+        {ufs.data && ufs.data.length > 0 && (
+          <small>
+            Usamos o local onde você fez a prova, que é o que o INEP divulga, e
+            não o de onde você mora.
+          </small>
+        )}
 
         <div className="campos-nota">
           {AREAS.map((a) => (
