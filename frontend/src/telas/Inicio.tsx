@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api, type Area, type Usuario } from "../api";
-import { dataCurta, nomeDaArea, tituloDaProva } from "../rotulos";
+import { estiloArea, nomeDaArea, subtituloDaProva, tituloDaProva } from "../rotulos";
 import { Evolucao } from "./Evolucao";
 
 interface Props {
@@ -68,9 +68,10 @@ export function Inicio({
             </span>
           </div>
           {melhor && (
-            <div className="stat">
+            <div className="stat" style={estiloArea(melhor.area)}>
               <strong>{Math.round(melhor.ultima as number)}</strong>
-              <span>melhor nota estimada ({nomeDaArea(melhor.area)})</span>
+              <span>melhor nota</span>
+              <em className="stat-area">{nomeDaArea(melhor.area)}</em>
             </div>
           )}
         </div>
@@ -102,26 +103,49 @@ export function Inicio({
       )}
       <ul className="lista">
         {[...(provas.data ?? [])].reverse().map((p) => (
-          <li key={p.id} className="cartao">
-            <div>
-              <strong>{tituloDaProva(p)}</strong>
-              <span className="mudo">
-                {p.acertos !== null && p.avaliadas !== null
-                  ? ` · ${p.acertos} de ${p.avaliadas} acertos`
-                  : " · sem correção"}
-                {p.nota_estimada !== null
-                  ? ` · nota estimada ${Math.round(p.nota_estimada)}`
-                  : ""}
-                {p.feita_em ? ` · ${dataCurta(p.feita_em)}` : ""}
-              </span>
+          <li key={p.id} className="prova" style={estiloArea(p.area)}>
+            <span className="prova-sigla" aria-hidden="true">
+              {p.area}
+            </span>
+            <div className="prova-titulo">
+              <strong>{nomeDaArea(p.area)}</strong>
+              <span className="mudo">{subtituloDaProva(p)}</span>
             </div>
-            <div className="acoes">
-              <button type="button" onClick={() => aoAbrir(p.id)}>
+            {p.nota_estimada !== null && (
+              <div className="prova-nota">
+                <b>{Math.round(p.nota_estimada)}</b>
+                <small>nota estimada</small>
+              </div>
+            )}
+            {p.acertos !== null && p.avaliadas !== null ? (
+              <div className="prova-acertos">
+                <span>
+                  <strong>{p.acertos}</strong> de {p.avaliadas} acertos
+                </span>
+                <div
+                  className="trilha"
+                  role="img"
+                  aria-label={`${p.acertos} de ${p.avaliadas} acertos`}
+                >
+                  <i style={{ width: `${Math.max(3, (p.acertos / p.avaliadas) * 100)}%` }} />
+                </div>
+              </div>
+            ) : (
+              <p className="mudo prova-acertos">Sem correção</p>
+            )}
+            <div className="prova-acoes">
+              <button
+                type="button"
+                className="ver"
+                aria-label={`Ver ${tituloDaProva(p)}`}
+                onClick={() => aoAbrir(p.id)}
+              >
                 Ver
               </button>
               <button
                 type="button"
                 className="perigo"
+                aria-label={`Excluir ${tituloDaProva(p)}`}
                 onClick={() =>
                   window.confirm("Excluir esta prova?") && excluir.mutate(p.id)
                 }

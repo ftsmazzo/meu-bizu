@@ -11,6 +11,8 @@ const ROTAS = [
   "/saude",
   "/relatorio",
   "/raio-x",
+  "/geo",
+  "/folha",
 ];
 
 // Em desenvolvimento a API roda em outra porta (uvicorn); o proxy mantém tudo na mesma origem,

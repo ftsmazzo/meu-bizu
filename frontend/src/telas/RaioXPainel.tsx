@@ -212,9 +212,11 @@ function Perdidas({ prova }: { prova: SuaProva }) {
         {prova.perdidas.map((q, i) => (
           <li key={i} className="cartao alcance-item">
             <div>
-              <strong>Habilidade {q.habilidade}</strong>{" "}
-              <span className="chance">{q.chance}% de quem tem a sua nota acerta</span>
-              <span className={`resultado ${q.resultado}`}>{RESULTADO[q.resultado]}</span>
+              <div className="item-cab">
+                <strong>Habilidade {q.habilidade}</strong>
+                <span className="chance">{q.chance}% de quem tem a sua nota acerta</span>
+                <span className={`resultado ${q.resultado}`}>{RESULTADO[q.resultado]}</span>
+              </div>
               {q.descricao && <p className="mudo">{q.descricao}</p>}
               <VerQuestao questao={q.questao} />
             </div>
@@ -338,13 +340,15 @@ function DetalheArea({ a }: { a: AreaRaioX }) {
             {a.alcance.map((q, i) => (
               <li key={i} className="cartao alcance-item">
                 <div>
-                  <strong>Habilidade {q.habilidade}</strong>{" "}
-                  <span className="chance">{q.chance}% de chance</span>
-                  {q.resultado && (
-                    <span className={`resultado ${q.resultado}`}>
-                      {RESULTADO[q.resultado]}
-                    </span>
-                  )}
+                  <div className="item-cab">
+                    <strong>Habilidade {q.habilidade}</strong>
+                    <span className="chance">{q.chance}% de chance</span>
+                    {q.resultado && (
+                      <span className={`resultado ${q.resultado}`}>
+                        {RESULTADO[q.resultado]}
+                      </span>
+                    )}
+                  </div>
                   {q.descricao && <p className="mudo">{q.descricao}</p>}
                   <VerQuestao questao={q.questao} />
                 </div>

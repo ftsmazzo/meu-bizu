@@ -35,6 +35,12 @@ export function tituloDaProva(p: Pick<Resumo, "area" | "ano" | "tipo" | "feita_e
   return `${nomeDaArea(p.area)} · ${onde}`;
 }
 
+/** A segunda linha do cartão da prova: onde foi feita e quando (a área já está no título). */
+export function subtituloDaProva(p: Pick<Resumo, "ano" | "tipo" | "feita_em">): string {
+  const onde = p.tipo === "enem" ? `Enem ${p.ano}` : `Simulado · prova de ${p.ano}`;
+  return p.feita_em ? `${onde} · ${dataCurta(p.feita_em)}` : onde;
+}
+
 export function explicarReferencia(p: Pick<Resumo, "referencia" | "nota">): string {
   if (p.referencia === "tri") {
     return "Para esta prova usamos a dificuldade das questões como referência.";

@@ -75,9 +75,21 @@ h1 {
 }
 
 h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-size: 1.2rem;
   margin: 1.8rem 0 0.6rem;
   letter-spacing: -0.005em;
+}
+
+h2::before {
+  content: "";
+  flex: none;
+  width: 5px;
+  height: 1.1em;
+  border-radius: 3px;
+  background: linear-gradient(180deg, var(--marca), var(--hero-1));
 }
 
 h3 {
@@ -460,8 +472,12 @@ summary {
   border-radius: 24px;
   padding: 24px 22px;
   color: #fff;
-  background: linear-gradient(135deg, var(--hero-1), var(--hero-2));
-  box-shadow: var(--sombra);
+  background:
+    radial-gradient(520px 220px at 0% 100%, rgba(255, 255, 255, 0.1), transparent),
+    linear-gradient(135deg, var(--hero-1), var(--hero-2));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    var(--sombra);
 }
 
 .hero::after {
@@ -533,14 +549,43 @@ summary {
   margin: 6px 0 0;
 }
 
+/* A faixa de cor da área fica dentro do cartão (a borda de cima curvava nos cantos). */
 .card.area {
-  border-top: 4px solid var(--cor-area, var(--marca));
+  position: relative;
+  overflow: hidden;
+  padding-top: 20px;
+}
+
+.card.area::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 5px;
+  background: linear-gradient(
+    90deg,
+    var(--cor-area, var(--marca)),
+    color-mix(in srgb, var(--cor-area, var(--marca)) 55%, #fff)
+  );
+}
+
+.card-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.contagem {
+  color: var(--mudo);
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 
 .stats {
   display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   margin-top: 14px;
 }
 
@@ -548,7 +593,7 @@ summary {
   background: var(--superficie);
   border: 1px solid var(--linha);
   border-radius: var(--raio);
-  padding: 12px 14px;
+  padding: 14px 14px 12px;
   box-shadow: var(--sombra);
 }
 
@@ -557,11 +602,161 @@ summary {
   font-size: 1.7rem;
   line-height: 1.1;
   letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
 }
 
 .stat span {
+  display: block;
+  margin-top: 2px;
   color: var(--mudo);
+  font-size: 0.82rem;
+  line-height: 1.3;
+}
+
+.stat .stat-area {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-style: normal;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--cor-area, var(--marca));
+  background: color-mix(in srgb, var(--cor-area, var(--marca)) 14%, transparent);
+}
+
+/* ---------- cartão da prova ---------- */
+
+.prova {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "sigla titulo nota"
+    "acertos acertos acoes";
+  align-items: center;
+  gap: 14px 14px;
+  padding: 16px 16px 14px 20px;
+  background: var(--superficie);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+  transition:
+    box-shadow 0.2s,
+    transform 0.2s;
+}
+
+.prova::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: var(--cor-area, var(--marca));
+}
+
+.prova-sigla {
+  grid-area: sigla;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--cor-area, var(--marca));
+  background: color-mix(in srgb, var(--cor-area, var(--marca)) 14%, transparent);
+}
+
+.prova-titulo {
+  grid-area: titulo;
+  display: grid;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.prova-titulo strong {
+  font-size: 1.02rem;
+}
+
+.prova-titulo .mudo {
   font-size: 0.85rem;
+}
+
+.prova-nota {
+  grid-area: nota;
+  text-align: right;
+  line-height: 1.1;
+}
+
+.prova-nota b {
+  display: block;
+  font-size: 1.6rem;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.prova-nota small {
+  font-size: 0.72rem;
+}
+
+.prova-acertos {
+  grid-area: acertos;
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.prova-acertos .trilha {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--linha);
+  overflow: hidden;
+}
+
+.prova-acertos .trilha i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--cor-area, var(--marca)),
+    color-mix(in srgb, var(--cor-area, var(--marca)) 60%, #fff)
+  );
+}
+
+.prova-acoes {
+  grid-area: acoes;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 2px;
+}
+
+.prova-acoes button {
+  min-height: 40px;
+  padding: 6px 14px;
+}
+
+.prova-acoes button.ver {
+  background: var(--superficie-2);
+}
+
+.prova-acoes button.perigo {
+  background: none;
+  border-color: transparent;
+  font-weight: 500;
+}
+
+@media (hover: hover) {
+  .prova:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      0 2px 4px rgba(15, 31, 44, 0.06),
+      0 16px 34px rgba(15, 31, 44, 0.12);
+  }
 }
 
 .chip-area {
@@ -587,7 +782,21 @@ summary {
 .linha-nota {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
+  min-width: 0;
+}
+
+.nota-info {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.rotulo-nota {
+  color: var(--mudo);
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 
 .variacao {
@@ -595,11 +804,21 @@ summary {
 }
 
 .variacao.sobe {
-  color: var(--marca);
+  color: var(--marca-escura);
 }
 
 .variacao.desce {
   color: var(--foco);
+}
+
+.variacao.sobe::before {
+  content: "▲ ";
+  font-size: 0.8em;
+}
+
+.variacao.desce::before {
+  content: "▼ ";
+  font-size: 0.8em;
 }
 
 /* ---------- gráficos ---------- */
@@ -615,11 +834,13 @@ summary {
 .anel .valor {
   stroke: var(--cor-area, var(--marca));
   transition: stroke-dashoffset 0.8s ease;
+  filter: drop-shadow(0 2px 3px color-mix(in srgb, var(--cor-area, var(--marca)) 40%, transparent));
 }
 
 .anel text {
   fill: var(--texto);
   font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
 
 .grupos {
@@ -713,7 +934,12 @@ summary {
 
 .barras .rotulo b {
   white-space: nowrap;
-  color: var(--cor-area, var(--marca));
+  /* a cor da área misturada ao texto: mantém a identidade e passa no contraste */
+  color: color-mix(in srgb, var(--cor-area, var(--marca)) 60%, var(--texto));
+}
+
+.barras + small {
+  margin-top: 14px;
 }
 
 .barras .trilha {
@@ -764,6 +990,11 @@ summary {
   overflow-x: auto;
   padding: 4px 2px 10px;
   margin-top: 12px;
+  scrollbar-width: none; /* rola com o dedo; a barra cinza só poluía */
+}
+
+.abas::-webkit-scrollbar {
+  display: none;
 }
 
 .abas button {
@@ -794,7 +1025,7 @@ summary {
 
 .chance {
   font-weight: 800;
-  color: var(--cor-area, var(--marca));
+  color: color-mix(in srgb, var(--cor-area, var(--marca)) 60%, var(--texto));
   white-space: nowrap;
 }
 
@@ -819,8 +1050,18 @@ summary {
   color: var(--erro);
 }
 
+/* "Você acertou X de Y": destaque do cruzamento, logo abaixo do esperado. */
 .cruzado {
-  margin: 12px 0 0;
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--cor-area, var(--marca)) 9%, var(--superficie));
+  border-left: 4px solid var(--cor-area, var(--marca));
+  font-size: 0.95rem;
+}
+
+.legenda + small {
+  margin-top: 10px;
 }
 
 .campos-nota {
@@ -834,9 +1075,35 @@ summary {
   padding-left: 12px;
 }
 
-.alcance-item {
+/* Questão dentro de um cartão: fundo suave em vez de outro cartão com sombra. */
+.detalhe-area {
+  display: grid;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.cartao.alcance-item {
   display: grid;
   gap: 4px;
+  box-shadow: none;
+  border-color: transparent;
+  background: var(--superficie-2);
+  border-radius: 12px;
+}
+
+.item-cab {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+
+.item-cab .chance {
+  font-size: 0.9rem;
+}
+
+.item-cab .resultado {
+  margin-left: 0;
 }
 
 @media (min-width: 720px) {
@@ -860,6 +1127,14 @@ summary {
 
   .detalhe-area .largo {
     grid-column: 1 / -1;
+  }
+
+  /* Em tela larga o cartão da prova cabe numa linha só. */
+  .prova {
+    grid-template-columns: auto minmax(0, 1.1fr) minmax(0, 1fr) auto auto;
+    grid-template-areas: "sigla titulo acertos nota acoes";
+    gap: 18px;
+    padding: 14px 18px 14px 22px;
   }
 }
 

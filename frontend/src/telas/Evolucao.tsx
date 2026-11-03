@@ -30,10 +30,10 @@ export function Evolucao({ areas, provas = [], aoVerFoco }: Props) {
               className="card area"
               style={estiloArea(a.area)}
             >
-              <h3>
+              <header className="card-topo">
                 <span className="chip-area">{nomeDaArea(a.area)}</span>
-                <span className="mudo">{` · ${a.provas} ${a.provas === 1 ? "prova" : "provas"}`}</span>
-              </h3>
+                <span className="contagem">{`${a.provas} ${a.provas === 1 ? "prova" : "provas"}`}</span>
+              </header>
               <div className="linha-nota">
                 {a.ultima === null ? (
                   <p className="mudo">Sem nota estimada</p>
@@ -43,12 +43,17 @@ export function Evolucao({ areas, provas = [], aoVerFoco }: Props) {
                     rotulo={`Nota estimada em ${nomeDaArea(a.area)}: ${Math.round(a.ultima)}`}
                   />
                 )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <Sparkline
-                    pontos={pontos}
-                    rotulo={`Evolução em ${nomeDaArea(a.area)}`}
-                  />
-                </div>
+                {a.ultima !== null && (
+                  <div className="nota-info">
+                    <span className="rotulo-nota">Nota estimada</span>
+                    {pontos.length > 1 && (
+                      <Sparkline
+                        pontos={pontos}
+                        rotulo={`Evolução em ${nomeDaArea(a.area)}`}
+                      />
+                    )}
+                  </div>
+                )}
               </div>
               <p
                 className={
