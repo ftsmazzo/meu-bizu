@@ -68,7 +68,13 @@ export function App() {
           aoVerRelatorio={() => setTela({ nome: "relatorio", area: null })}
         />
       )}
-      {tela.nome === "raiox" && <RaioX aoVoltar={inicio} aoIncluirProva={incluir} />}
+      {tela.nome === "raiox" && (
+        <RaioX
+          aoVoltar={inicio}
+          aoIncluirProva={incluir}
+          aoVerDiagnostico={(area) => setTela({ nome: "foco", area })}
+        />
+      )}
       {tela.nome === "incluir" && <Incluir aoVoltar={inicio} aoGravar={resultado} />}
       {tela.nome === "corrigir" && (
         <Corrigir id={tela.id} aoVoltar={() => resultado(tela.id)} aoSalvar={resultado} />

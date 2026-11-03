@@ -36,13 +36,16 @@ const MT = {
 };
 
 let corpos: unknown[] = [];
+let provasGravadas: unknown[] = [];
 
 beforeEach(() => {
   corpos = [];
+  provasGravadas = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string, init?: RequestInit) => {
       if (url === "/anos") return new Response(JSON.stringify([2022, 2023]));
+      if (url === "/provas") return new Response(JSON.stringify(provasGravadas));
       if (url === "/geo/ufs?ano=2023") {
         return new Response(JSON.stringify([{ uf: "RJ", n: 90000 }, { uf: "SP", n: 150000 }]));
       }
@@ -63,12 +66,17 @@ beforeEach(() => {
 function montar() {
   const cliente = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const aoIncluirProva = vi.fn();
+  const aoVerDiagnostico = vi.fn();
   render(
     <QueryClientProvider client={cliente}>
-      <RaioX aoVoltar={vi.fn()} aoIncluirProva={aoIncluirProva} />
+      <RaioX
+        aoVoltar={vi.fn()}
+        aoIncluirProva={aoIncluirProva}
+        aoVerDiagnostico={aoVerDiagnostico}
+      />
     </QueryClientProvider>,
   );
-  return { aoIncluirProva };
+  return { aoIncluirProva, aoVerDiagnostico };
 }
 
 describe("Raio-X pela nota", () => {
@@ -154,6 +162,34 @@ describe("Raio-X pela nota", () => {
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"));
     expect(screen.getByText(/nunca pede a sua senha do gov.br/)).toBeInTheDocument();
+  });
+
+  it("puxa as provas já incluídas: preenche a nota e leva ao diagnóstico em vez de pedir de novo", async () => {
+    provasGravadas = [
+      { id: "p1", ano: 2023, area: "MT", nota: null, nota_estimada: 612.44, lingua: null },
+      { id: "p2", ano: 2022, area: "MT", nota: 500, nota_estimada: 480, lingua: null },
+    ];
+    const user = userEvent.setup();
+    const { aoVerDiagnostico } = montar();
+    await screen.findByRole("option", { name: "2023" });
+    expect(
+      screen.queryByRole("button", { name: /Preencher com as minhas provas/ }),
+    ).not.toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Ano do Enem"), "2023");
+    await user.click(
+      await screen.findByRole("button", { name: "Preencher com as minhas provas de 2023" }),
+    );
+    expect(screen.getByLabelText("Matemática")).toHaveValue("612,4"); // só a prova de 2023
+
+    await user.click(screen.getByRole("button", { name: "Ver meu Raio-X" }));
+    expect(
+      await screen.findByRole("heading", { name: "Seu diagnóstico de verdade já está pronto" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Incluir o que marquei numa prova" }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ver onde errei em Matemática" }));
+    expect(aoVerDiagnostico).toHaveBeenCalledWith("MT");
   });
 
   it("leva ao formulário de prova pelo convite do diagnóstico de verdade", async () => {

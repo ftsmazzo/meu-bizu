@@ -17,10 +17,13 @@ function lerNota(texto: string): number | null {
 interface Props {
   aoVoltar: () => void;
   aoIncluirProva: () => void;
+  aoVerDiagnostico: (area: Area) => void;
 }
 
+const nota1 = (v: number) => String(Math.round(v * 10) / 10).replace(".", ",");
+
 /** Raio-X pela nota: o aluno informa as notas por área e vê o que costuma acontecer com quem as tem. */
-export function RaioX({ aoVoltar, aoIncluirProva }: Props) {
+export function RaioX({ aoVoltar, aoIncluirProva, aoVerDiagnostico }: Props) {
   const [ano, setAno] = useState<number | null>(null);
   const [textos, setTextos] = useState<Partial<Record<Area, string>>>({});
   const [lingua, setLingua] = useState<number | null>(null);
@@ -39,6 +42,22 @@ export function RaioX({ aoVoltar, aoIncluirProva }: Props) {
     enabled: ano !== null && uf !== "",
   });
   const raiox = useMutation({ mutationFn: api.raioX });
+  const provas = useQuery({ queryKey: ["provas"], queryFn: api.provas });
+
+  // A prova mais recente de cada área no ano escolhido (a lista vem em ordem de data).
+  const doAno = new Map<Area, NonNullable<typeof provas.data>[number]>();
+  for (const p of provas.data ?? []) if (p.ano === ano) doAno.set(p.area, p);
+
+  function usarMinhasProvas() {
+    const novos: Partial<Record<Area, string>> = {};
+    for (const [area, p] of doAno) {
+      const valor = p.nota ?? p.nota_estimada;
+      if (valor !== null) novos[area] = nota1(valor);
+    }
+    setTextos(novos);
+    const lc = doAno.get("LC");
+    if (lc && lc.lingua !== null) setLingua(lc.lingua);
+  }
 
   const notas = Object.fromEntries(
     AREAS.map((a) => [a.valor, lerNota(textos[a.valor] ?? "")]).filter(
@@ -72,6 +91,8 @@ export function RaioX({ aoVoltar, aoIncluirProva }: Props) {
         aoVoltar={aoVoltar}
         aoRefazer={() => raiox.reset()}
         aoIncluirProva={aoIncluirProva}
+        areasComProva={[...doAno.keys()]}
+        aoVerDiagnostico={aoVerDiagnostico}
       />
     );
   }
@@ -155,6 +176,18 @@ export function RaioX({ aoVoltar, aoIncluirProva }: Props) {
             Usamos o local onde você fez a prova, que é o que o INEP divulga, e
             não o de onde você mora.
           </small>
+        )}
+
+        {doAno.size > 0 && (
+          <div className="acoes">
+            <button type="button" onClick={usarMinhasProvas}>
+              Preencher com as minhas provas de {ano}
+            </button>
+            <small>
+              Usa a nota que você informou na prova ou, sem ela, a estimada pelos seus
+              acertos.
+            </small>
+          </div>
         )}
 
         <div className="campos-nota">

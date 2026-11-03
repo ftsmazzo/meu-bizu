@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import type { AreaRaioX, RaioX } from "../api";
+import type { Area, AreaRaioX, RaioX } from "../api";
 import { LETRAS } from "../folha";
 import { decimal, estiloArea, nomeDaArea } from "../rotulos";
 import {
@@ -16,6 +16,9 @@ interface Props {
   aoVoltar: () => void;
   aoRefazer: () => void;
   aoIncluirProva: () => void;
+  /** Áreas em que o aluno já gravou uma prova neste ano. */
+  areasComProva: Area[];
+  aoVerDiagnostico: (area: Area) => void;
 }
 
 /** Frase sobre a posição, sem jargão: a base é o grupo de 10% em que a nota cai. */
@@ -34,7 +37,11 @@ export function RaioXPainel({
   aoVoltar,
   aoRefazer,
   aoIncluirProva,
+  areasComProva,
+  aoVerDiagnostico,
 }: Props) {
+  const comProva = dados.areas.filter((a) => areasComProva.includes(a.area));
+  const semProva = dados.areas.length > comProva.length;
   const [aberta, setAberta] = useState(dados.areas[0].area);
   const area = dados.areas.find((a) => a.area === aberta) ?? dados.areas[0];
 
@@ -100,19 +107,44 @@ export function RaioXPainel({
 
       <DetalheArea key={area.area} a={area} />
 
-      <section className="card" style={{ marginTop: 14 }}>
-        <h3>Quer um diagnóstico de verdade?</h3>
-        <p>
-          Esta leitura usa só a sua nota. Se você informar o que marcou numa
-          prova, mostramos onde <strong>você</strong> errou, comparando com quem
-          tem a sua nota.
-        </p>
-        <div className="acoes">
-          <button type="button" className="primario" onClick={aoIncluirProva}>
-            Incluir o que marquei numa prova
-          </button>
-        </div>
-      </section>
+      {comProva.length > 0 && (
+        <section className="card" style={{ marginTop: 14 }}>
+          <h3>Seu diagnóstico de verdade já está pronto</h3>
+          <p>
+            Você já incluiu {comProva.length === 1 ? "a prova" : "as provas"} de{" "}
+            {comProva.map((a) => nomeDaArea(a.area)).join(", ")}. Aqui mostramos
+            onde <strong>você</strong> errou, comparando com quem tem a sua nota.
+          </p>
+          <div className="acoes">
+            {comProva.map((a) => (
+              <button
+                key={a.area}
+                type="button"
+                className="primario"
+                onClick={() => aoVerDiagnostico(a.area)}
+              >
+                Ver onde errei em {nomeDaArea(a.area)}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {semProva && (
+        <section className="card" style={{ marginTop: 14 }}>
+          <h3>Quer um diagnóstico de verdade?</h3>
+          <p>
+            Esta leitura usa só a sua nota. Se você informar o que marcou numa
+            prova, mostramos onde <strong>você</strong> errou, comparando com
+            quem tem a sua nota.
+          </p>
+          <div className="acoes">
+            <button type="button" className="primario" onClick={aoIncluirProva}>
+              Incluir o que marquei numa prova
+            </button>
+          </div>
+        </section>
+      )}
       <p className="mudo">
         Estimativa feita com dados oficiais do INEP sobre quem fez a prova de{" "}
         {dados.ano}. Pode variar de pessoa para pessoa.
