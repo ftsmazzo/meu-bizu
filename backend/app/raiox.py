@@ -12,6 +12,9 @@ SEGURA = 0.75  # a partir daqui o aluno tende a acertar
 ALCANCE = 0.40  # entre ALCANCE e SEGURA: vale revisar, é onde mais se ganha
 MAX_FOCO = 8
 MAX_ALCANCE = 5
+MAX_EVITAVEIS = 5
+TOLERANCIA = 1.5  # até quantos acertos de diferença ainda contam como "dentro do esperado"
+LETRAS = tuple("ABCDE")
 
 
 def a_frente_de(nota: float, pontos: list[float]) -> int:
@@ -19,6 +22,64 @@ def a_frente_de(nota: float, pontos: list[float]) -> int:
     percentis (5%, 10%, ..., 95%): vale o maior que a nota já alcançou, sem arredondar para cima.
     Abaixo do percentil 5 devolve 0 e acima do 95 devolve 95, pois a ponta não é exportada."""
     return 5 * sum(p <= nota for p in pontos)
+
+
+def _resultado(marca: str, gabarito: str) -> str:
+    if marca == gabarito:
+        return "acertou"
+    return "em_branco" if marca == "." else "errou"
+
+
+def cruzar(
+    itens: list[dict],
+    chances: dict[int, float],
+    respostas: dict[int, str],
+    gabaritos: dict[int, str],
+) -> dict:
+    """Põe lado a lado o que se espera de quem tem a nota (`chances`, de `analisar_area`) e o que o
+    aluno fez numa prova do mesmo ano e área (`respostas` e `gabaritos` por co_item). Só entram
+    questões que estão nos dois lados e têm gabarito (anuladas ficam de fora). O gabarito é usado
+    aqui para corrigir e nunca sai: o resultado diz só se acertou, errou ou deixou em branco."""
+    comuns = [
+        i for i in itens if i["co_item"] in respostas and gabaritos.get(i["co_item"]) in LETRAS
+    ]
+    resultados = {
+        i["co_item"]: _resultado(respostas[i["co_item"]], gabaritos[i["co_item"]]) for i in comuns
+    }
+    acertos = sum(r == "acertou" for r in resultados.values())
+    esperado = round(sum(chances[i["co_item"]] for i in comuns), 1)
+    perdidas = sorted(
+        (
+            i
+            for i in comuns
+            if chances[i["co_item"]] >= SEGURA and resultados[i["co_item"]] != "acertou"
+        ),
+        key=lambda i: -chances[i["co_item"]],
+    )
+    habilidades: dict[int, dict] = {}
+    for i in comuns:
+        g = habilidades.setdefault(i["habilidade"], {"n": 0, "acertos": 0})
+        g["n"] += 1
+        g["acertos"] += resultados[i["co_item"]] == "acertou"
+    folga = acertos - esperado
+    return {
+        "avaliadas": len(comuns),
+        "acertos": acertos,
+        "esperado": esperado,
+        "leitura": "acima" if folga > TOLERANCIA else "abaixo" if folga < -TOLERANCIA else "dentro",
+        "resultados": resultados,
+        "habilidades": habilidades,
+        "evitaveis_total": len(perdidas),
+        "evitaveis": [
+            {
+                "co_item": i["co_item"],
+                "habilidade": i["habilidade"],
+                "chance": round(chances[i["co_item"]] * 100),
+                "resultado": resultados[i["co_item"]],
+            }
+            for i in perdidas[:MAX_EVITAVEIS]
+        ],
+    }
 
 
 def _proximo_degrau(cortes: list[dict], decil: int) -> float | None:
@@ -83,6 +144,7 @@ def analisar_area(
         "alvo": alvo,
         "total": len(itens),
         "esperado": round(sum(chances.values()), 1),
+        "chances": chances,
         "faixas": faixas,
         "foco": foco,
         "alcance": [

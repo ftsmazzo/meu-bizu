@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from app.carga_ref import carregar_ref
 from app.db import get_conn
 from app.main import app
-from app.raiox import analisar_area
+from app.raiox import analisar_area, cruzar
 
 SENHA = "uma-senha-boa-123"
 
@@ -86,6 +86,42 @@ def test_nota_estimada_fica_vazia_quando_os_acertos_nao_passam_do_chute():
     assert _nota_estimada(parametros, gabaritos, {1: "A", 2: "A", 3: "B"}) is not None  # 2 > 1,5
 
 
+GABARITOS = {1: "A", 2: "A", 3: "C", 4: "D"}
+
+
+def _cruzar(nota, respostas, gabaritos=GABARITOS):
+    return cruzar(ITENS, analisar_area(nota, ITENS, CORTES)["chances"], respostas, gabaritos)
+
+
+def test_cruzar_diz_o_que_o_aluno_fez_e_acha_os_erros_evitaveis():
+    c = _cruzar(500, {1: "B", 2: "A", 3: "C", 4: "."})
+    assert c["resultados"] == {1: "errou", 2: "acertou", 3: "acertou", 4: "em_branco"}
+    assert (c["acertos"], c["avaliadas"]) == (2, 4)
+    # só o item 1 é "segura" para quem tem 500 e foi errado; o difícil em branco não é evitável
+    assert c["evitaveis_total"] == 1 and c["evitaveis"][0]["co_item"] == 1
+    assert c["evitaveis"][0]["chance"] >= 75 and c["evitaveis"][0]["resultado"] == "errou"
+    assert c["habilidades"] == {5: {"n": 2, "acertos": 1}, 7: {"n": 2, "acertos": 1}}
+
+
+def test_cruzar_ignora_anulada_e_questao_fora_da_prova_do_aluno():
+    sem_gabarito = {1: "A", 2: "A", 3: "C", 4: "X"}  # item 4 anulado
+    assert _cruzar(500, {1: "A", 2: "A", 3: "C", 4: "D"}, sem_gabarito)["avaliadas"] == 3
+    assert _cruzar(500, {1: "A", 2: "A"})["avaliadas"] == 2  # o aluno não tem 3 e 4
+
+
+def test_cruzar_le_acima_dentro_e_abaixo_do_esperado():
+    assert _cruzar(400, {1: "A", 2: "A", 3: "C", 4: "D"})["leitura"] == "acima"
+    assert _cruzar(500, {1: "B", 2: "B", 3: "B", 4: "B"})["leitura"] == "abaixo"
+    esperado = analisar_area(500, ITENS, CORTES)["esperado"]
+    assert abs(esperado - 2) < 1.5  # 2 acertos de 4 ficam dentro do esperado para quem tem 500
+    assert _cruzar(500, {1: "A", 2: "A", 3: "B", 4: "B"})["leitura"] == "dentro"
+
+
+def test_cruzar_nao_devolve_gabarito():
+    texto = json.dumps(_cruzar(500, {1: "B", 2: "A", 3: "C", 4: "."}))
+    assert '"gabarito"' not in texto and '"D"' not in texto
+
+
 # ---------------------------------------------------------------- rota
 
 
@@ -127,6 +163,50 @@ def test_raiox_de_matematica(cliente):
     assert mt["alvo"] == 520 and mt["a_frente_de"] == 30
     assert mt["foco"][0]["habilidade"] == 5 and mt["foco"][0]["descricao"] == "Desc"
     assert "gabarito" not in json.dumps(r.json()).lower()
+
+
+def _gravar(cliente, folha, ano=2023):
+    corpo = {"ano": ano, "area": "MT", "co_prova": 7, "tipo": "enem", "folha": folha}
+    assert cliente.post("/provas", json=corpo).status_code == 201
+
+
+def test_raiox_sem_prova_incluida_nao_traz_cruzamento(cliente):
+    (mt,) = cliente.post("/raio-x", json={"ano": 2023, "notas": {"MT": 500}}).json()["areas"]
+    assert mt["sua_prova"] is None
+    assert all(q["resultado"] is None for q in mt["alcance"])
+    assert all(h["seus_acertos"] is None for h in mt["foco"])
+
+
+def test_raiox_cruza_com_a_prova_incluida_sem_vazar_gabarito(cliente):
+    _gravar(cliente, "AAA")  # gabarito A, B, C: acerta só a primeira
+    r = cliente.post("/raio-x", json={"ano": 2023, "notas": {"MT": 500}})
+    (mt,) = r.json()["areas"]
+    sua = mt["sua_prova"]
+    assert (sua["acertos"], sua["avaliadas"]) == (1, 3)
+    assert sua["leitura"] in ("acima", "dentro", "abaixo") and sua["esperado"] > 0
+    assert sua["perdidas_total"] >= len(sua["perdidas"])
+    assert all(p["chance"] >= 75 and p["resultado"] == "errou" for p in sua["perdidas"])
+    assert {q["resultado"] for q in mt["alcance"]} <= {"acertou", "errou", "em_branco"}
+    assert mt["foco"][0]["seus_de"] == 3 and mt["foco"][0]["seus_acertos"] == 1
+    assert "gabarito" not in json.dumps(r.json()).lower()
+
+
+def test_raiox_acertando_tudo_nao_tem_perdidas(cliente):
+    _gravar(cliente, "ABC")
+    (mt,) = cliente.post("/raio-x", json={"ano": 2023, "notas": {"MT": 500}}).json()["areas"]
+    assert mt["sua_prova"]["acertos"] == 3 and mt["sua_prova"]["perdidas_total"] == 0
+
+
+def test_raiox_cruzamento_so_olha_as_provas_do_proprio_aluno(conn, cliente):
+    _gravar(cliente, "ABC")
+    outro = TestClient(app, base_url="https://testserver")
+    r = outro.post(
+        "/conta/cadastro",
+        json={"email": "bruno@exemplo.com", "nome": "B", "senha": SENHA, "maior_de_18": True},
+    )
+    assert r.status_code == 201
+    (mt,) = outro.post("/raio-x", json={"ano": 2023, "notas": {"MT": 500}}).json()["areas"]
+    assert mt["sua_prova"] is None
 
 
 def test_raiox_devolve_o_texto_da_questao_que_esta_ao_alcance(cliente):

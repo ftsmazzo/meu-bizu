@@ -124,8 +124,19 @@ questões ao alcance, com o texto (nunca o gabarito). A chance de cada questão 
 **observado** do grupo do aluno; sem dado observado cai na TRI. Itens anulados ou sem parâmetro não
 contam. É uma leitura descritiva ("o que costuma acontecer com quem tem a sua nota"), não um
 diagnóstico das respostas. Link do INEP para consultar a nota:
-`https://enem.inep.gov.br/participante/` (o produto nunca pede a senha do gov.br). Falta a
-coerência por resposta (exige as marcações).
+`https://enem.inep.gov.br/participante/` (o produto nunca pede a senha do gov.br).
+
+**Cruzamento com as provas incluídas (feito):** se o aluno já gravou uma prova do mesmo ano e área
+(a mais recente; em LC, da mesma língua), `POST /raio-x` devolve em cada área `sua_prova` com
+`acertos`, `avaliadas`, `esperado`, `leitura` (`acima`, `dentro` ou `abaixo`, com tolerância de 1,5
+acerto), `perdidas_total` e `perdidas` (até 5 questões em que quem tem a nota acerta 75% ou mais e o
+aluno não acertou, com o texto). Também preenche `resultado` (`acertou`, `errou`, `em_branco`) em
+cada questão ao alcance e `seus_acertos`/`seus_de` em cada habilidade do foco. O casamento é por
+`co_item`, igual em todos os cadernos do ano e da área, então vale mesmo que o caderno feito não seja
+o de referência. O gabarito é usado só para corrigir no servidor e nunca sai (teste garante). Sem
+prova incluída, os campos vêm vazios. Verificado com dados reais de 2023: acertos e questões
+avaliadas do cruzamento são iguais aos da correção da prova. A tela também preenche as notas do
+formulário a partir das provas do ano e leva do painel ao diagnóstico de cada área.
 
 **Ranking por estado e município:** `POST /raio-x` aceita `uf` (sigla) e `municipio` (código IBGE de
 7 dígitos) e devolve, por área, `brasil`, `uf` e `municipio` como `{nome, a_frente_de, n}`:

@@ -99,6 +99,42 @@ def test_ranking_real_por_estado_e_municipio_em_2023(cliente):
     print(mt["brasil"], mt["uf"], mt["municipio"], ac["areas"][0]["uf"])
 
 
+# Perfil "Mediano" de 2023, caderno AZUL: (área, caderno, nota, folha). LC é inglês.
+MEDIANO = [
+    ("LC", 1201, 540, "B.AADCAAAEDCCBBABCDDBCBDBEACBEEBAACADACBBE.AE"),
+    ("CH", 1191, 570, "CDBDEADBBBADCADEBDD.ABCDEABEDCDEEAADCCCEEBAD."),
+    ("CN", 1221, 510, "DBDEAEBCADAEAEADEACBECE.ECDCBDEDDCEC.CCDAABDB"),
+    ("MT", 1211, 590, "*CADAEBBCBCBDECBCC.CECCDEEEDBBCCDDBCBBE.BDCCA"),
+]
+
+
+def test_raiox_cruza_com_as_provas_reais_do_mediano(cliente):
+    logado = TestClient(app, base_url="https://testserver")
+    cadastro = {"email": "m@exemplo.com", "nome": "M", "maior_de_18": True}
+    logado.post(
+        "/conta/cadastro", json=cadastro | {"senha": "uma-senha-boa-123"}
+    ).raise_for_status()
+    for area, co_prova, nota, folha in MEDIANO:
+        corpo = {"ano": 2023, "area": area, "co_prova": co_prova, "tipo": "enem", "nota": nota}
+        corpo |= {"lingua": 0 if area == "LC" else None, "folha": folha}
+        r = logado.post("/provas", json=corpo)
+        assert r.status_code == 201, r.text
+    provas = {p["area"]: p for p in logado.get("/provas").json()}
+    notas = {area: nota for area, _, nota, _ in MEDIANO}
+    r = logado.post("/raio-x", json={"ano": 2023, "notas": notas, "lingua": 0})
+    assert r.status_code == 200, r.text
+    for a in r.json()["areas"]:
+        sua, prova = a["sua_prova"], provas[a["area"]]
+        # o cruzamento enxerga as mesmas questões que a correção da prova (mesmo co_item)
+        assert sua is not None, a["area"]
+        assert sua["acertos"] == prova["acertos"], a["area"]
+        assert sua["avaliadas"] == prova["avaliadas"], a["area"]
+        assert all(p["chance"] >= 75 for p in sua["perdidas"])
+        print(a["area"], sua["acertos"], sua["avaliadas"], sua["esperado"], sua["leitura"])
+        print("   perdidas:", sua["perdidas_total"], [p["habilidade"] for p in sua["perdidas"]])
+    assert "gabarito" not in json.dumps(r.json()).lower()
+
+
 def test_cadernos_ambiguos_de_2020_ficam_bloqueados(cliente):
     cadernos = cliente.get("/anos/2020/areas/LC/cadernos").json()
     ambiguos = [c for c in cadernos if not c["selecionavel"] and "ambíguo" in c["motivo"]]

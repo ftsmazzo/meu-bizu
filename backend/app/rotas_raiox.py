@@ -1,12 +1,13 @@
 """Raio-X pela nota do aluno logado. Só lê a base de referência: nada é gravado."""
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
 
-from app import auth, repositorio
-from app.raiox import a_frente_de, analisar_area
+from app import auth, provas, repositorio
+from app.correcao import ProvaInvalida, avaliar_prova
+from app.raiox import a_frente_de, analisar_area, cruzar
 from app.rotas_provas import Area
 
 router = APIRouter()
@@ -39,11 +40,15 @@ class Enunciado(BaseModel):
     imagens: list
 
 
+Resultado = Literal["acertou", "errou", "em_branco"]
+
+
 class QuestaoAoAlcance(BaseModel):
     habilidade: int
     descricao: str | None
     chance: int
     questao: Enunciado | None
+    resultado: Resultado | None = None  # o que o aluno fez nela, se já incluiu a prova
 
 
 class Foco(BaseModel):
@@ -53,6 +58,29 @@ class Foco(BaseModel):
     esperado: float
     alvo: float
     ganho: float
+    seus_acertos: int | None = None  # nesta habilidade, na prova que o aluno incluiu
+    seus_de: int | None = None
+
+
+class Perdida(BaseModel):
+    """Questão que quem tem a nota costuma acertar e o aluno não acertou."""
+
+    habilidade: int
+    descricao: str | None
+    chance: int
+    resultado: Resultado
+    questao: Enunciado | None
+
+
+class SuaProva(BaseModel):
+    """O Raio-X cruzado com a prova que o aluno incluiu (a mais recente do ano e da área)."""
+
+    acertos: int
+    avaliadas: int
+    esperado: float
+    leitura: Literal["acima", "dentro", "abaixo"]
+    perdidas_total: int
+    perdidas: list[Perdida]
 
 
 class Faixas(BaseModel):
@@ -83,6 +111,7 @@ class AreaRaioX(BaseModel):
     faixas: Faixas
     foco: list[Foco]
     alcance: list[QuestaoAoAlcance]
+    sua_prova: SuaProva | None = None
 
 
 class RaioX(BaseModel):
@@ -105,6 +134,30 @@ def _itens_da_prova(conn, ano: int, area: str, lingua: int | None) -> list[dict]
             continue  # anulado ou sem parâmetro: não conta
         vistos[i["co_item"]] = p
     return list(vistos.values())
+
+
+def _prova_do_aluno(conn, ano: int, area: str, lingua: int | None):
+    """Correção da prova mais recente do aluno neste ano e área (e língua, em LC), ou None."""
+    candidatas = [
+        p
+        for p in provas.listar(conn, area)
+        if p["ano"] == ano and (area != "LC" or p["lingua"] == lingua)
+    ]
+    if not candidatas:
+        return None
+    p = candidatas[-1]
+    try:
+        return avaliar_prova(
+            conn,
+            ano=p["ano"],
+            area=p["area"],
+            co_prova=p["co_prova"],
+            lingua=p["lingua"],
+            folha=p["folha"],
+            nota=p["nota"],
+        )
+    except ProvaInvalida:
+        return None
 
 
 def _posicao(conn, ano: int, area: str, nivel: str, codigo: str | None, nota: float):
@@ -142,7 +195,17 @@ def raio_x(corpo: RaioXEntrada, sessao: Sessao) -> RaioX:
         nota = corpo.notas[area]
         observado = repositorio.esperado_por_decil(conn, corpo.ano, [i["co_item"] for i in itens])
         r = analisar_area(nota, itens, repositorio.cortes(conn, corpo.ano, area), observado)
-        textos = repositorio.questoes(conn, corpo.ano, [q["co_item"] for q in r["alcance"]])
+        av = _prova_do_aluno(conn, corpo.ano, area, corpo.lingua)
+        cruz = None
+        if av is not None:
+            do_caderno = repositorio.itens_do_caderno(conn, corpo.ano, area, av.co_prova)
+            gabaritos = {i["co_item"]: i["gabarito"] for i in do_caderno}
+            cruz = cruzar(itens, r["chances"], av.respostas, gabaritos)
+        resultados = cruz["resultados"] if cruz else {}
+        habilidades = cruz["habilidades"] if cruz else {}
+        pedidos = [q["co_item"] for q in r["alcance"]]
+        pedidos += [p["co_item"] for p in cruz["evitaveis"]] if cruz else []
+        textos = repositorio.questoes(conn, corpo.ano, pedidos)
         areas.append(
             AreaRaioX(
                 area=area,
@@ -153,7 +216,13 @@ def raio_x(corpo: RaioXEntrada, sessao: Sessao) -> RaioX:
                 **{k: r[k] for k in ("decil", "a_frente_de", "alvo", "total", "esperado")},
                 faixas=Faixas(**r["faixas"]),
                 foco=[
-                    Foco(**h, descricao=descricoes.get((area, h["habilidade"]))) for h in r["foco"]
+                    Foco(
+                        **h,
+                        descricao=descricoes.get((area, h["habilidade"])),
+                        seus_acertos=habilidades.get(h["habilidade"], {}).get("acertos"),
+                        seus_de=habilidades.get(h["habilidade"], {}).get("n"),
+                    )
+                    for h in r["foco"]
                 ],
                 alcance=[
                     QuestaoAoAlcance(
@@ -161,9 +230,29 @@ def raio_x(corpo: RaioXEntrada, sessao: Sessao) -> RaioX:
                         descricao=descricoes.get((area, q["habilidade"])),
                         chance=q["chance"],
                         questao=_enunciado(textos.get(q["co_item"])),
+                        resultado=resultados.get(q["co_item"]),
                     )
                     for q in r["alcance"]
                 ],
+                sua_prova=None
+                if cruz is None
+                else SuaProva(
+                    acertos=cruz["acertos"],
+                    avaliadas=cruz["avaliadas"],
+                    esperado=cruz["esperado"],
+                    leitura=cruz["leitura"],
+                    perdidas_total=cruz["evitaveis_total"],
+                    perdidas=[
+                        Perdida(
+                            habilidade=p["habilidade"],
+                            descricao=descricoes.get((area, p["habilidade"])),
+                            chance=p["chance"],
+                            resultado=p["resultado"],
+                            questao=_enunciado(textos.get(p["co_item"])),
+                        )
+                        for p in cruz["evitaveis"]
+                    ],
+                ),
             )
         )
     return RaioX(ano=corpo.ano, areas=areas)

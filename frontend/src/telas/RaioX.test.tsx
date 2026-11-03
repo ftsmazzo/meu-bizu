@@ -18,13 +18,24 @@ const MT = {
   esperado: 19.8,
   faixas: { seguras: 9, alcance: 11, dificeis: 25 },
   foco: [
-    { habilidade: 12, descricao: "Medidas de grandezas", n: 2, esperado: 0.8, alvo: 1.3, ganho: 0.5 },
+    {
+      habilidade: 12,
+      descricao: "Medidas de grandezas",
+      n: 2,
+      esperado: 0.8,
+      alvo: 1.3,
+      ganho: 0.5,
+      seus_acertos: null,
+      seus_de: null,
+    },
   ],
+  sua_prova: null,
   alcance: [
     {
       habilidade: 5,
       descricao: "Números",
       chance: 62,
+      resultado: null,
       questao: {
         introducao: null,
         enunciado: "Quanto é 2+2?",
@@ -37,10 +48,12 @@ const MT = {
 
 let corpos: unknown[] = [];
 let provasGravadas: unknown[] = [];
+let areaDoMock: unknown = MT;
 
 beforeEach(() => {
   corpos = [];
   provasGravadas = [];
+  areaDoMock = MT;
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string, init?: RequestInit) => {
@@ -56,7 +69,7 @@ beforeEach(() => {
       }
       if (url === "/raio-x") {
         corpos.push(JSON.parse(String(init?.body)));
-        return new Response(JSON.stringify({ ano: 2023, areas: [MT] }));
+        return new Response(JSON.stringify({ ano: 2023, areas: [areaDoMock] }));
       }
       return new Response("{}", { status: 404 });
     }),
@@ -190,6 +203,62 @@ describe("Raio-X pela nota", () => {
     ).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Ver onde errei em Matemática" }));
     expect(aoVerDiagnostico).toHaveBeenCalledWith("MT");
+  });
+
+  it("cruza com a prova incluída: esperado contra real, pontos que escaparam e resultado por questão", async () => {
+    const enunciado = {
+      introducao: null,
+      enunciado: "Quanto é 3+3?",
+      alternativas: { A: "seis", B: "sete" },
+      imagens: [],
+    };
+    areaDoMock = {
+      ...MT,
+      foco: [{ ...MT.foco[0], seus_acertos: 1, seus_de: 2 }],
+      alcance: [{ ...MT.alcance[0], resultado: "errou" }],
+      sua_prova: {
+        acertos: 23,
+        avaliadas: 45,
+        esperado: 19.8,
+        leitura: "acima",
+        perdidas_total: 3,
+        perdidas: [
+          { habilidade: 9, descricao: "Contagem", chance: 88, resultado: "em_branco", questao: enunciado },
+        ],
+      },
+    };
+    const user = userEvent.setup();
+    montar();
+    await screen.findByRole("option", { name: "2023" });
+    await user.selectOptions(screen.getByLabelText("Ano do Enem"), "2023");
+    await user.type(screen.getByLabelText("Matemática"), "640");
+    await user.click(screen.getByRole("button", { name: "Ver meu Raio-X" }));
+
+    expect(await screen.findByText(/23 de 45/)).toBeInTheDocument();
+    expect(screen.getByText(/acima do esperado para a sua nota/)).toBeInTheDocument();
+    const alcance = screen.getByText(/62% de chance/).closest("li") as HTMLElement;
+    expect(within(alcance).getByText("Você errou")).toBeInTheDocument();
+    expect(screen.getByText(/Na sua prova: 1 de 2/)).toBeInTheDocument();
+
+    const perdidas = (await screen.findByRole("heading", { name: "Pontos que escaparam" })).closest(
+      "section",
+    ) as HTMLElement;
+    expect(within(perdidas).getByText("88% de quem tem a sua nota acerta")).toBeInTheDocument();
+    expect(within(perdidas).getByText("Você deixou em branco")).toBeInTheDocument();
+    expect(within(perdidas).getByText("Quanto é 3+3?")).toBeInTheDocument();
+    expect(within(perdidas).getByText(/E mais 2 questões desse tipo/)).toBeInTheDocument();
+  });
+
+  it("não mostra pontos que escaparam quando não há prova incluída", async () => {
+    const user = userEvent.setup();
+    montar();
+    await screen.findByRole("option", { name: "2023" });
+    await user.selectOptions(screen.getByLabelText("Ano do Enem"), "2023");
+    await user.type(screen.getByLabelText("Matemática"), "640");
+    await user.click(screen.getByRole("button", { name: "Ver meu Raio-X" }));
+    await screen.findByRole("heading", { name: "Seu Raio-X do Enem 2023" });
+    expect(screen.queryByRole("heading", { name: "Pontos que escaparam" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Na sua prova/)).not.toBeInTheDocument();
   });
 
   it("leva ao formulário de prova pelo convite do diagnóstico de verdade", async () => {

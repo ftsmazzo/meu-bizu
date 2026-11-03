@@ -89,6 +89,8 @@ export interface NovaProva {
   folha: string;
 }
 
+export type ResultadoQuestao = "acertou" | "errou" | "em_branco";
+
 export interface FocoRaioX {
   habilidade: number;
   descricao: string | null;
@@ -96,18 +98,42 @@ export interface FocoRaioX {
   esperado: number;
   alvo: number;
   ganho: number;
+  /** Na prova que o aluno já incluiu; vazios quando ele não incluiu nenhuma. */
+  seus_acertos: number | null;
+  seus_de: number | null;
+}
+
+export interface EnunciadoRaioX {
+  introducao: string | null;
+  enunciado: string | null;
+  alternativas: Record<string, string | null>;
+  imagens: unknown[];
 }
 
 export interface QuestaoAoAlcance {
   habilidade: number;
   descricao: string | null;
   chance: number;
-  questao: {
-    introducao: string | null;
-    enunciado: string | null;
-    alternativas: Record<string, string | null>;
-    imagens: unknown[];
-  } | null;
+  questao: EnunciadoRaioX | null;
+  resultado: ResultadoQuestao | null;
+}
+
+/** Questão que quem tem a nota costuma acertar e o aluno não acertou. */
+export interface QuestaoPerdida {
+  habilidade: number;
+  descricao: string | null;
+  chance: number;
+  resultado: Exclude<ResultadoQuestao, "acertou">;
+  questao: EnunciadoRaioX | null;
+}
+
+export interface SuaProva {
+  acertos: number;
+  avaliadas: number;
+  esperado: number;
+  leitura: "acima" | "dentro" | "abaixo";
+  perdidas_total: number;
+  perdidas: QuestaoPerdida[];
 }
 
 /** Onde a nota fica num local: supera pelo menos `a_frente_de`% de `n` participantes. */
@@ -142,6 +168,8 @@ export interface AreaRaioX {
   faixas: { seguras: number; alcance: number; dificeis: number };
   foco: FocoRaioX[];
   alcance: QuestaoAoAlcance[];
+  /** O Raio-X cruzado com a prova que o aluno incluiu neste ano e área, se houver. */
+  sua_prova: SuaProva | null;
 }
 
 export interface RaioX {

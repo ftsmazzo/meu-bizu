@@ -798,6 +798,31 @@ summary {
   white-space: nowrap;
 }
 
+.resultado {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.resultado.acertou {
+  background: var(--marca-suave);
+  color: var(--marca-escura);
+}
+
+.resultado.errou,
+.resultado.em_branco {
+  background: color-mix(in srgb, var(--erro) 14%, transparent);
+  color: var(--erro);
+}
+
+.cruzado {
+  margin: 12px 0 0;
+}
+
 .campos-nota {
   display: grid;
   gap: 12px;

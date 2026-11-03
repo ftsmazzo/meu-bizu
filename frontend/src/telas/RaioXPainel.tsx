@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import type { Area, AreaRaioX, RaioX } from "../api";
+import type { Area, AreaRaioX, EnunciadoRaioX, RaioX, SuaProva } from "../api";
 import { LETRAS } from "../folha";
 import { decimal, estiloArea, nomeDaArea } from "../rotulos";
 import {
@@ -153,6 +153,83 @@ export function RaioXPainel({
   );
 }
 
+const RESULTADO = {
+  acertou: "Você acertou",
+  errou: "Você errou",
+  em_branco: "Você deixou em branco",
+} as const;
+
+const LEITURA = {
+  acima: "Isso está acima do esperado para a sua nota.",
+  dentro: "Isso está dentro do esperado para a sua nota.",
+  abaixo:
+    "Isso está abaixo do esperado para a sua nota: dá para recuperar, veja os pontos que escaparam.",
+} as const;
+
+function VerQuestao({ questao }: { questao: EnunciadoRaioX | null }) {
+  if (!questao) return null;
+  return (
+    <details>
+      <summary>Ver a questão</summary>
+      {questao.introducao && <p className="texto">{questao.introducao}</p>}
+      {questao.enunciado && <p className="texto">{questao.enunciado}</p>}
+      {questao.imagens.length > 0 && <p className="mudo">[Imagem]</p>}
+      <ul>
+        {LETRAS.map(
+          (l) =>
+            questao.alternativas[l] && (
+              <li key={l} className="texto">
+                <strong>{l}</strong> {questao.alternativas[l]}
+              </li>
+            ),
+        )}
+      </ul>
+    </details>
+  );
+}
+
+/** Onde a nota sobe mais rápido: o que quem tem a sua nota acerta e a sua prova não acertou. */
+function Perdidas({ prova }: { prova: SuaProva }) {
+  if (prova.perdidas_total === 0) {
+    return (
+      <section className="card largo">
+        <h3>Pontos que escaparam</h3>
+        <p className="mudo">
+          Nenhuma questão fácil para a sua nota escapou nesta prova. Bom sinal.
+        </p>
+      </section>
+    );
+  }
+  const restantes = prova.perdidas_total - prova.perdidas.length;
+  return (
+    <section className="card largo">
+      <h3>Pontos que escaparam</h3>
+      <p className="mudo">
+        Questões que quem tem a sua nota costuma acertar e você não acertou.
+        Aqui a nota sobe mais rápido: vale refazer.
+      </p>
+      <ul className="lista">
+        {prova.perdidas.map((q, i) => (
+          <li key={i} className="cartao alcance-item">
+            <div>
+              <strong>Habilidade {q.habilidade}</strong>{" "}
+              <span className="chance">{q.chance}% de quem tem a sua nota acerta</span>
+              <span className={`resultado ${q.resultado}`}>{RESULTADO[q.resultado]}</span>
+              {q.descricao && <p className="mudo">{q.descricao}</p>}
+              <VerQuestao questao={q.questao} />
+            </div>
+          </li>
+        ))}
+      </ul>
+      {restantes > 0 && (
+        <small>
+          E mais {restantes} {restantes === 1 ? "questão" : "questões"} desse tipo.
+        </small>
+      )}
+    </section>
+  );
+}
+
 function DetalheArea({ a }: { a: AreaRaioX }) {
   const total = Math.round(a.esperado);
   return (
@@ -206,7 +283,18 @@ function DetalheArea({ a }: { a: AreaRaioX }) {
           “Ao seu alcance” são as questões em que a sua chance é boa, mas não
           certa: é onde mais se ganha.
         </small>
+        {a.sua_prova && (
+          <p className="cruzado">
+            Na prova que você incluiu, você acertou{" "}
+            <strong>
+              {a.sua_prova.acertos} de {a.sua_prova.avaliadas}
+            </strong>
+            . {LEITURA[a.sua_prova.leitura]}
+          </p>
+        )}
       </section>
+
+      {a.sua_prova && <Perdidas prova={a.sua_prova} />}
 
       <section className="card largo">
         <h3>Onde focar para subir um degrau</h3>
@@ -228,7 +316,11 @@ function DetalheArea({ a }: { a: AreaRaioX }) {
                 rotulo: `Habilidade ${h.habilidade}${h.descricao ? ` · ${h.descricao}` : ""}`,
                 valor: h.ganho,
                 texto: `+${decimal(h.ganho)}`,
-                detalhe: `Hoje cerca de ${decimal(h.esperado)}; um degrau acima, ${decimal(h.alvo)} (de ${h.n} ${h.n === 1 ? "questão" : "questões"})`,
+                detalhe:
+                  `Hoje cerca de ${decimal(h.esperado)}; um degrau acima, ${decimal(h.alvo)} (de ${h.n} ${h.n === 1 ? "questão" : "questões"})` +
+                  (h.seus_acertos !== null && h.seus_de !== null
+                    ? `. Na sua prova: ${h.seus_acertos} de ${h.seus_de}`
+                    : ""),
               }))}
             />
           </>
@@ -248,31 +340,13 @@ function DetalheArea({ a }: { a: AreaRaioX }) {
                 <div>
                   <strong>Habilidade {q.habilidade}</strong>{" "}
                   <span className="chance">{q.chance}% de chance</span>
-                  {q.descricao && <p className="mudo">{q.descricao}</p>}
-                  {q.questao && (
-                    <details>
-                      <summary>Ver a questão</summary>
-                      {q.questao.introducao && (
-                        <p className="texto">{q.questao.introducao}</p>
-                      )}
-                      {q.questao.enunciado && (
-                        <p className="texto">{q.questao.enunciado}</p>
-                      )}
-                      {q.questao.imagens.length > 0 && (
-                        <p className="mudo">[Imagem]</p>
-                      )}
-                      <ul>
-                        {LETRAS.map(
-                          (l) =>
-                            q.questao?.alternativas[l] && (
-                              <li key={l} className="texto">
-                                <strong>{l}</strong> {q.questao.alternativas[l]}
-                              </li>
-                            ),
-                        )}
-                      </ul>
-                    </details>
+                  {q.resultado && (
+                    <span className={`resultado ${q.resultado}`}>
+                      {RESULTADO[q.resultado]}
+                    </span>
                   )}
+                  {q.descricao && <p className="mudo">{q.descricao}</p>}
+                  <VerQuestao questao={q.questao} />
                 </div>
               </li>
             ))}
