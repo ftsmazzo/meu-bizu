@@ -34,6 +34,14 @@ ano -> área    grade com 1 linha       resumo: marcadas,   acertos, referência
 - *Tipo*: "Fiz no Enem" (usa o ano da prova) ou "Refiz como simulado" (pede a data). *Nota*
   opcional, com a explicação "melhora a comparação; sem ela estimamos pelos acertos".
 
+**Colar em vez de selecionar (feito).** No topo do passo 1 há um campo para colar um cartão como
+`2023 · LC · Inglês · AZUL 1201 · B.AADC…` (ou só a sequência de respostas). A tela lê ano, área
+(`LC`, `CH`, `CN`, `MT` ou o nome), língua, código do caderno e a sequência (`A`–`E`, `.` branco,
+`*` dupla), escolhe tudo e abre a grade já preenchida. O que protege de erro: o código só vale se
+existir no ano e na área (senão avisa e não avança) e a sequência precisa ter o tamanho da prova.
+É só texto no navegador; nada novo na API. Próximo passo, a foto da folha: ler as marcações com
+visão computacional e **sempre** mostrar a grade preenchida para o aluno conferir antes de gravar.
+
 **Passo 2 – Respostas.** Grade com uma linha por questão, na ordem do caderno (45; em LC são as 5 da
 língua mais as 40 comuns). Cada linha tem as opções A B C D E, "em branco" e "dupla marcação".
 

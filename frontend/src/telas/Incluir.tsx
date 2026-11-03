@@ -2,7 +2,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { api, type Area, type Resultado, type Tipo } from "../api";
-import { avisos, folhaDeTexto, folhaEmTexto, resumo, type Folha, type Marca } from "../folha";
+import {
+  avisos,
+  folhaDeTexto,
+  folhaEmTexto,
+  lerColagem,
+  resumo,
+  type Folha,
+  type Marca,
+} from "../folha";
 import { AREAS } from "../rotulos";
 import { Grade } from "./Grade";
 
@@ -85,8 +93,38 @@ export function Incluir(props: Props) {
   const [passo, setPasso] = useState<1 | 2 | 3>(1);
   const [r, setR] = useState<Rascunho>(() => (edicao ? deResultado(edicao) : lerRascunho()));
   const mudar = (parte: Partial<Rascunho>) => setR((a) => ({ ...a, ...parte }));
+  const [colado, setColado] = useState("");
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [codigoColado, setCodigoColado] = useState<number | null>(null);
+  const [daColagem, setDaColagem] = useState(false);
   // Trocar qualquer coisa que defina a prova invalida as respostas já marcadas.
-  const trocarProva = (parte: Partial<Rascunho>) => mudar({ ...parte, folha: [] });
+  const trocarProva = (parte: Partial<Rascunho>) => {
+    setDaColagem(false);
+    mudar({ ...parte, folha: [] });
+  };
+
+  function preencherPelaColagem() {
+    const c = lerColagem(colado);
+    if (c.folha.length === 0) {
+      setAviso("Não achei a sequência de respostas no texto colado.");
+      return;
+    }
+    const ano = c.ano ?? r.ano;
+    const area = c.area ?? r.area;
+    const mudouProva = c.codigo !== null || c.ano !== null || c.area !== null;
+    setAviso(null);
+    setDaColagem(true);
+    setCodigoColado(c.codigo !== null && ano !== null && area !== null ? c.codigo : null);
+    setR((a) => ({
+      ...a,
+      ano,
+      area,
+      lingua: c.lingua ?? (c.area !== null && c.area !== "LC" ? null : a.lingua),
+      coProva: mudouProva ? null : a.coProva,
+      folha: c.folha,
+    }));
+    setColado("");
+  }
 
   useEffect(() => {
     if (!edicao) guardarRascunho(r);
@@ -108,13 +146,36 @@ export function Incluir(props: Props) {
 
   const total = questoes.data?.length;
   useEffect(() => {
-    if (total !== undefined && r.folha.length !== total) mudar({ folha: Array(total).fill(null) });
+    if (total === undefined || r.folha.length === total) return;
+    if (r.folha.length > 0) {
+      setAviso(
+        `A sequência colada tem ${r.folha.length} respostas, mas esta prova tem ${total} questões. ` +
+          "Confira o ano, a área, a língua e o caderno.",
+      );
+    }
+    mudar({ folha: Array(total).fill(null) });
   }, [total, r.folha.length]);
 
   const notaNum = r.nota.trim() === "" ? null : Number(r.nota.replace(",", "."));
   const notaOk = notaNum === null || (Number.isFinite(notaNum) && notaNum >= 0 && notaNum <= 1000);
   const dataOk = r.tipo === "enem" || (r.feitaEm !== "" && r.feitaEm <= hoje());
   const passo1Ok = r.coProva !== null && !linguaPendente && dataOk && notaOk;
+
+  // O código do caderno colado só vale se existir naquele ano e área: é o que pega o ano errado.
+  useEffect(() => {
+    if (codigoColado === null || !cadernos.data) return;
+    setCodigoColado(null);
+    const achado = cadernos.data.find((c) => c.co_prova === codigoColado);
+    if (achado?.selecionavel) {
+      mudar({ coProva: achado.co_prova });
+      if (!linguaPendente && dataOk && notaOk) setPasso(2);
+    } else {
+      setAviso(
+        `O caderno ${codigoColado} não existe em ${r.ano} para esta área. ` +
+          "Confira o ano e escolha o caderno na lista (o código está na capa da prova).",
+      );
+    }
+  }, [codigoColado, cadernos.data]);
 
   const gravar = useMutation({
     mutationFn: () => {
@@ -158,6 +219,29 @@ export function Incluir(props: Props) {
           </li>
         ))}
       </ol>
+
+      {aviso && <p className="aviso">{aviso}</p>}
+
+      {passo === 1 && !edicao && (
+        <section className="card colagem">
+          <label>
+            Tem as respostas em texto? Cole aqui
+            <textarea
+              rows={3}
+              value={colado}
+              onChange={(e) => setColado(e.target.value)}
+              placeholder="Ex.: 2023 · LC · Inglês · AZUL 1201 · B.AADCAAAEDCC…"
+            />
+            <small>
+              Com ano, área, caderno e respostas no texto, preenchemos tudo e você só confere. Só com
+              as respostas, preenchemos só elas.
+            </small>
+          </label>
+          <button type="button" onClick={preencherPelaColagem} disabled={colado.trim() === ""}>
+            Preencher com o texto
+          </button>
+        </section>
+      )}
 
       {passo === 1 && (
         <form
@@ -223,9 +307,12 @@ export function Incluir(props: Props) {
             <select
               value={r.coProva ?? ""}
               disabled={!cadernos.data}
-              onChange={(e) =>
-                trocarProva({ coProva: e.target.value ? Number(e.target.value) : null })
-              }
+              onChange={(e) => {
+                const coProva = e.target.value ? Number(e.target.value) : null;
+                // Respostas coladas continuam valendo quando só o caderno é escolhido à mão.
+                if (daColagem) mudar({ coProva });
+                else trocarProva({ coProva });
+              }}
             >
               <option value="">Escolha…</option>
               {cadernos.data?.map((c) => (

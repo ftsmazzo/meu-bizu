@@ -6,14 +6,28 @@ import type { ReactElement } from "react";
 import type { Resultado } from "../api";
 import { Incluir } from "./Incluir";
 
-const QUESTOES = [1, 2, 3].map((numero) => ({
-  numero,
-  introducao: null,
-  enunciado: `Enunciado ${numero}`,
-  alternativas: { A: "um", B: "dois", C: "tres", D: "quatro", E: "cinco" },
-  imagens: [],
-  tem_texto: true,
-}));
+let tamanhoDaProva = 3;
+
+const questoesDaProva = () =>
+  Array.from({ length: tamanhoDaProva }, (_, i) => ({
+    numero: i + 1,
+    introducao: null,
+    enunciado: `Enunciado ${i + 1}`,
+    alternativas: { A: "um", B: "dois", C: "tres", D: "quatro", E: "cinco" },
+    imagens: [],
+    tem_texto: true,
+  }));
+
+const CADERNOS_2022 = [
+  {
+    co_prova: 1101,
+    cor: "AZUL",
+    rotulo: "AZUL (código 1101)",
+    referencia: "decil",
+    selecionavel: true,
+    motivo: "",
+  },
+];
 
 const CADERNOS = [
   {
@@ -44,6 +58,7 @@ function resposta(corpo: unknown, status = 200) {
 
 beforeEach(() => {
   chamadas = [];
+  tamanhoDaProva = 3;
   localStorage.clear();
   vi.stubGlobal(
     "fetch",
@@ -52,7 +67,8 @@ beforeEach(() => {
       chamadas.push({ url, metodo, corpo: init?.body ? JSON.parse(String(init.body)) : null });
       if (url === "/anos") return resposta([2022, 2023]);
       if (url === "/anos/2023/areas/MT/cadernos") return resposta(CADERNOS);
-      if (url.startsWith("/cadernos/1211/questoes")) return resposta(QUESTOES);
+      if (url === "/anos/2022/areas/MT/cadernos") return resposta(CADERNOS_2022);
+      if (url.startsWith("/cadernos/1211/questoes")) return resposta(questoesDaProva());
       if (url === "/provas" && metodo === "POST") return resposta(RESULTADO, 201);
       if (url === "/provas/p1" && metodo === "PUT") return resposta(RESULTADO);
       return resposta({ detail: "não encontrado" }, 404);
@@ -177,6 +193,54 @@ describe("Incluir resultado", () => {
     expect(chamadas.some((c) => c.metodo === "POST")).toBe(false);
     expect(aoGravar).toHaveBeenCalledWith("p1");
     expect(localStorage.getItem("bizu:rascunho")).toBeNull();
+  });
+
+  async function colar(user: ReturnType<typeof userEvent.setup>, texto: string) {
+    await screen.findByRole("option", { name: "2023" });
+    await user.click(screen.getByLabelText(/Tem as respostas em texto/));
+    await user.paste(texto);
+    await user.click(screen.getByRole("button", { name: "Preencher com o texto" }));
+  }
+
+  it("cartão colado escolhe ano, área e caderno, preenche as respostas e abre a grade", async () => {
+    tamanhoDaProva = 20;
+    const user = userEvent.setup();
+    montar(<Incluir aoVoltar={vi.fn()} aoGravar={vi.fn()} />);
+    await colar(user, "2023 · MT · AZUL 1211 · ABCDEABCDEABCDEABCDE");
+
+    const grade = await screen.findByRole("group", { name: "Respostas" });
+    expect(within(grade).getByRole("button", { name: "Questão 2, alternativa B" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await user.click(screen.getByRole("button", { name: "Conferir" }));
+    expect(screen.getByText(/Marcadas: 20/)).toBeInTheDocument();
+  });
+
+  it("avisa quando o caderno colado não existe no ano e não avança", async () => {
+    const user = userEvent.setup();
+    montar(<Incluir aoVoltar={vi.fn()} aoGravar={vi.fn()} />);
+    await screen.findByRole("option", { name: "2022" });
+    await colar(user, "2022 MT 1211 ABCDEABCDEABCDEABCDE");
+
+    expect(await screen.findByText(/O caderno 1211 não existe em 2022/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Continuar" })).toBeDisabled();
+  });
+
+  it("avisa quando a sequência colada tem tamanho diferente da prova", async () => {
+    const user = userEvent.setup();
+    montar(<Incluir aoVoltar={vi.fn()} aoGravar={vi.fn()} />);
+    await colar(user, "2023 MT 1211 ABCDEABCDEABCDEABCDE");
+
+    expect(await screen.findByText(/tem 20 respostas, mas esta prova tem 3 questões/)).toBeInTheDocument();
+  });
+
+  it("recusa texto sem sequência de respostas", async () => {
+    const user = userEvent.setup();
+    montar(<Incluir aoVoltar={vi.fn()} aoGravar={vi.fn()} />);
+    await colar(user, "2023 MT 1211");
+
+    expect(screen.getByText(/Não achei a sequência de respostas/)).toBeInTheDocument();
   });
 
   it("guarda o rascunho no navegador e retoma de onde parou", async () => {

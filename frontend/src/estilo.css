@@ -160,6 +160,7 @@ fieldset {
 
 input,
 select,
+textarea,
 button {
   font: inherit;
   min-height: 46px;
@@ -170,8 +171,20 @@ button {
   padding: 8px 14px;
 }
 
+textarea {
+  width: 100%;
+  resize: vertical;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+}
+
+.colagem {
+  margin-bottom: 16px;
+}
+
 input:hover,
-select:hover {
+select:hover,
+textarea:hover {
   border-color: color-mix(in srgb, var(--marca) 45%, var(--linha));
 }
 

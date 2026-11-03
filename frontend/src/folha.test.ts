@@ -1,9 +1,41 @@
-import { avisos, folhaDeTexto, folhaEmTexto, marcaDaTecla, resumo, type Folha } from "./folha";
+import {
+  avisos,
+  folhaDeTexto,
+  folhaEmTexto,
+  lerColagem,
+  marcaDaTecla,
+  resumo,
+  type Folha,
+} from "./folha";
 
 describe("folhaDeTexto", () => {
   it("abre o texto gravado e volta igual", () => {
     expect(folhaDeTexto("A.*e")).toEqual(["A", ".", "*", "E"]);
     expect(folhaEmTexto(folhaDeTexto("AB.*"))).toBe("AB.*");
+  });
+});
+
+describe("lerColagem", () => {
+  const SEQ = "B.AADCAAAEDCCBBABCDDBCBDBEACBEEBAACADACBBE.AE";
+
+  it("lê o cartão completo e ignora a cor do caderno", () => {
+    const c = lerColagem(`2023 · LC · Inglês · AZUL 1201 · ${SEQ}`);
+    expect(c).toMatchObject({ ano: 2023, area: "LC", lingua: 0, codigo: 1201 });
+    expect(folhaEmTexto(c.folha)).toBe(SEQ);
+  });
+
+  it("aceita só a sequência, sem mais nada", () => {
+    const c = lerColagem(`  ${SEQ.toLowerCase()}\n`);
+    expect(c).toMatchObject({ ano: null, area: null, lingua: null, codigo: null });
+    expect(c.folha).toHaveLength(45);
+  });
+
+  it("reconhece espanhol e área em qualquer caixa", () => {
+    expect(lerColagem("2022 mt 1211 espanhol")).toMatchObject({ area: "MT", lingua: 1 });
+  });
+
+  it("sem sequência a folha vem vazia", () => {
+    expect(lerColagem("2023 LC AZUL 1201").folha).toEqual([]);
   });
 });
 
