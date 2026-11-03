@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 
 import { api } from "../api";
+import { Marca } from "../ui/Marca";
 
 /** Entrar ou criar conta. O cadastro declara ter 18 anos ou mais (a API também exige). */
 export function Entrada({ aoEntrar }: { aoEntrar: () => void }) {
@@ -23,9 +24,11 @@ export function Entrada({ aoEntrar }: { aoEntrar: () => void }) {
   }
 
   return (
-    <main className="app entrada">
-      <h1>Meu Bizu</h1>
-      <p className="sub">Descubra onde focar nos estudos para o Enem.</p>
+    <main className="entrada-tela">
+      <div className="entrada-cartao">
+        <Marca />
+        <h1 style={{ marginTop: 18 }}>{criando ? "Crie a sua conta" : "Bem-vindo de volta"}</h1>
+        <p className="sub">Descubra com dados oficiais onde focar nos estudos para o Enem.</p>
       <form onSubmit={submeter}>
         {criando && (
           <label>
@@ -73,6 +76,7 @@ export function Entrada({ aoEntrar }: { aoEntrar: () => void }) {
       <button type="button" className="link" onClick={() => setCriando(!criando)}>
         {criando ? "Já tenho conta" : "Criar uma conta"}
       </button>
+      </div>
     </main>
   );
 }

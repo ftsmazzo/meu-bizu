@@ -28,6 +28,17 @@ def caderno(conn: psycopg.Connection, ano: int, area: str, co_prova: int) -> dic
         return cur.fetchone()
 
 
+def caderno_de_referencia(conn: psycopg.Connection, ano: int, area: str) -> int | None:
+    """Um caderno que representa a prova do ano: os cadernos de cor diferente trazem os mesmos
+    itens em outra ordem. Prefere o que tem respondentes; adaptados ficam de fora."""
+    linha = conn.execute(
+        "select co_prova from ref.caderno where ano = %s and area = %s and not adaptado "
+        "order by tem_respondentes desc, co_prova limit 1",
+        (ano, area),
+    ).fetchone()
+    return linha[0] if linha else None
+
+
 def itens_do_caderno(conn: psycopg.Connection, ano: int, area: str, co_prova: int) -> list[dict]:
     with conn.cursor(row_factory=dict_row) as cur:
         cur.execute(

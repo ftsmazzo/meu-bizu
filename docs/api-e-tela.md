@@ -96,6 +96,18 @@ caminho leva id de aluno): `POST /conta/cadastro`, `POST /conta/entrar`, `POST /
 `GET /perfil?area=&desde=`. Prova de outra pessoa responde 404, igual a prova inexistente. O
 relatório por IA fica para a F5.
 
+**Raio-X pela nota (feito):** `POST /raio-x` com `{ano, notas: {LC?, CH?, CN?, MT?}, lingua?}`
+(login exigido; nada é gravado). Para cada área devolve o grupo de 10% em que a nota cai e a
+frente de quantos participantes ela está (`a_frente_de`), o próximo degrau (meio do grupo
+seguinte), o total esperado de acertos, as questões da prova do ano separadas em seguras, ao
+alcance e difíceis, as habilidades em que mais se ganha ao subir um degrau (`foco`) e até 5
+questões ao alcance, com o texto (nunca o gabarito). A chance de cada questão é o acerto
+**observado** do grupo do aluno; sem dado observado cai na TRI. Itens anulados ou sem parâmetro não
+contam. É uma leitura descritiva ("o que costuma acontecer com quem tem a sua nota"), não um
+diagnóstico das respostas. Ainda falta o ranking por estado e município (exige exportar agregados
+do laboratório) e a coerência por resposta (exige as marcações). Link do INEP para consultar a nota:
+`https://enem.inep.gov.br/participante/` (o produto nunca pede a senha do gov.br).
+
 **F5 (código pronto):** `POST /relatorio?area=` (sem `area` = todas). Fluxo: monta os fatos do
 perfil (áreas, nota estimada, variação e até 3 habilidades com sinal de lacuna por área, com
 contagens; sem nome, e-mail ou id), pede o texto à IA e só o aceita se todo número do texto estiver

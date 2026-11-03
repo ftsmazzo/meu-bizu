@@ -71,9 +71,10 @@ def _nota_estimada(parametros: dict[int, dict], gabaritos: dict[int, str], respo
     TRI não separa a nota (só dá piso ou teto) e prometeria precisão que não existe."""
     avaliadas = [co for co in respostas if co in parametros and gabaritos.get(co) in LETRAS]
     acertos = sum(respostas[co] == gabaritos[co] for co in avaliadas)
-    if acertos == 0 or acertos == len(avaliadas):
-        return None
     abc = [(parametros[co]["a"], parametros[co]["b"], parametros[co]["c"]) for co in avaliadas]
+    # Abaixo do que o chute puro rende (soma dos c) a TRI só devolveria o piso da escala.
+    if acertos <= sum(c for _, _, c in abc) or acertos >= len(avaliadas):
+        return None
     return nota_por_acertos(abc, acertos)
 
 

@@ -1,6 +1,12 @@
 /** Textos que o aluno vê. Sem jargão estatístico (decil, TRI, z) na frente dele. */
 
+import type { CSSProperties } from "react";
+
 import type { Area, Resumo } from "./api";
+
+/** Define `--cor-area` para o elemento e seus filhos (as cores ficam em estilo.css). */
+export const estiloArea = (area: string): CSSProperties =>
+  ({ "--cor-area": `var(--area-${area.toLowerCase()})` }) as CSSProperties;
 
 export const AREAS: { valor: Area; nome: string }[] = [
   { valor: "LC", nome: "Linguagens" },

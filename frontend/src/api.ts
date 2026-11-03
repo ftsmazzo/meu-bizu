@@ -89,6 +89,51 @@ export interface NovaProva {
   folha: string;
 }
 
+export interface FocoRaioX {
+  habilidade: number;
+  descricao: string | null;
+  n: number;
+  esperado: number;
+  alvo: number;
+  ganho: number;
+}
+
+export interface QuestaoAoAlcance {
+  habilidade: number;
+  descricao: string | null;
+  chance: number;
+  questao: {
+    introducao: string | null;
+    enunciado: string | null;
+    alternativas: Record<string, string | null>;
+    imagens: unknown[];
+  } | null;
+}
+
+export interface AreaRaioX {
+  area: Area;
+  nota: number;
+  decil: number | null;
+  a_frente_de: number | null;
+  alvo: number | null;
+  total: number;
+  esperado: number;
+  faixas: { seguras: number; alcance: number; dificeis: number };
+  foco: FocoRaioX[];
+  alcance: QuestaoAoAlcance[];
+}
+
+export interface RaioX {
+  ano: number;
+  areas: AreaRaioX[];
+}
+
+export interface PedidoRaioX {
+  ano: number;
+  notas: Partial<Record<Area, number>>;
+  lingua: number | null;
+}
+
 export class ErroApi extends Error {
   constructor(
     readonly status: number,
@@ -148,6 +193,7 @@ export const api = {
   prova: (id: string) => pedir<Resultado>(`/provas/${id}`),
   editarProva: (id: string, prova: NovaProva) => pedir<Resultado>(`/provas/${id}`, "PUT", prova),
   excluirProva: (id: string) => pedir<void>(`/provas/${id}`, "DELETE"),
+  raioX: (pedido: PedidoRaioX) => pedir<RaioX>("/raio-x", "POST", pedido),
   relatorio: (area: Area | null) =>
     pedir<{ texto: string; origem: "ia" | "padrao" }>(
       area ? `/relatorio?area=${area}` : "/relatorio",

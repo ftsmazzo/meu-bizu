@@ -56,6 +56,27 @@ def test_linguagens_2023_tem_45_questoes_por_lingua(cliente):
         assert r.status_code == 200 and len(r.json()) == 45
 
 
+def test_raiox_real_cobre_as_quatro_areas_de_2023(cliente):
+    logado = TestClient(app, base_url="https://testserver")
+    cadastro = {"email": "r@exemplo.com", "nome": "R", "maior_de_18": True}
+    logado.post(
+        "/conta/cadastro", json=cadastro | {"senha": "uma-senha-boa-123"}
+    ).raise_for_status()
+    corpo = {"ano": 2023, "notas": {"LC": 520, "CH": 560, "CN": 480, "MT": 640}, "lingua": 0}
+    r = logado.post("/raio-x", json=corpo)
+    assert r.status_code == 200, r.text
+    areas = {a["area"]: a for a in r.json()["areas"]}
+    assert list(areas) == ["LC", "CH", "CN", "MT"]
+    for a in areas.values():
+        # anuladas e itens sem parâmetro ficam de fora, então o total pode ser um pouco menor
+        assert 40 <= a["total"] <= 45 and sum(a["faixas"].values()) == a["total"]
+        assert a["decil"] in range(1, 11) and a["foco"] and a["foco"][0]["ganho"] > 0
+        assert len(a["alcance"]) <= 5 and 0 < a["esperado"] < a["total"]
+    assert areas["MT"]["decil"] > areas["CN"]["decil"]  # 640 está acima de 480
+    print({k: (v["decil"], v["esperado"], v["faixas"]) for k, v in areas.items()})
+    print(areas["MT"]["foco"][:3])
+
+
 def test_cadernos_ambiguos_de_2020_ficam_bloqueados(cliente):
     cadernos = cliente.get("/anos/2020/areas/LC/cadernos").json()
     ambiguos = [c for c in cadernos if not c["selecionavel"] and "ambíguo" in c["motivo"]]
