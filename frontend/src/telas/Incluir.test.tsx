@@ -6,6 +6,11 @@ import type { ReactElement } from "react";
 import type { Resultado } from "../api";
 import { Incluir } from "./Incluir";
 
+// O navegador de teste não decodifica imagem; a redução da foto é testada à mão.
+vi.mock("../foto", () => ({
+  prepararFoto: async () => ({ imagem: "AAAA", tipo: "image/jpeg" }),
+}));
+
 let tamanhoDaProva = 3;
 
 const questoesDaProva = () =>
@@ -69,6 +74,7 @@ beforeEach(() => {
       if (url === "/anos/2023/areas/MT/cadernos") return resposta(CADERNOS);
       if (url === "/anos/2022/areas/MT/cadernos") return resposta(CADERNOS_2022);
       if (url.startsWith("/cadernos/1211/questoes")) return resposta(questoesDaProva());
+      if (url === "/folha/foto") return resposta({ respostas: "AB?" });
       if (url === "/provas" && metodo === "POST") return resposta(RESULTADO, 201);
       if (url === "/provas/p1" && metodo === "PUT") return resposta(RESULTADO);
       return resposta({ detail: "não encontrado" }, 404);
@@ -241,6 +247,54 @@ describe("Incluir resultado", () => {
     await colar(user, "2023 MT 1211");
 
     expect(screen.getByText(/Não achei a sequência de respostas/)).toBeInTheDocument();
+  });
+
+  it("lê a foto, preenche só o que estava vazio e avisa o que não deu para ler", async () => {
+    const user = userEvent.setup();
+    montar(<Incluir aoVoltar={vi.fn()} aoGravar={vi.fn()} />);
+    await escolherProva(user);
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    const grade = await screen.findByRole("group", { name: "Respostas" });
+    await user.click(within(grade).getByRole("button", { name: "Questão 1, alternativa C" }));
+
+    await user.upload(
+      screen.getByLabelText(/Ler de uma foto/),
+      new File(["x"], "folha.jpg", { type: "image/jpeg" }),
+    );
+
+    expect(await screen.findByText(/Li a foto/)).toBeInTheDocument();
+    expect(screen.getByText(/1 questão não deu para ler/)).toBeInTheDocument();
+    const marcada = (q: number, letra: string) =>
+      within(grade).getByRole("button", { name: `Questão ${q}, alternativa ${letra}` });
+    expect(marcada(1, "C")).toHaveAttribute("aria-pressed", "true"); // o que o aluno marcou fica
+    expect(marcada(1, "A")).toHaveAttribute("aria-pressed", "false");
+    expect(marcada(2, "B")).toHaveAttribute("aria-pressed", "true");
+    for (const letra of ["A", "B", "C", "D", "E"]) {
+      expect(marcada(3, letra)).toHaveAttribute("aria-pressed", "false"); // "?" fica sem resposta
+    }
+    const envio = chamadas.find((c) => c.url === "/folha/foto");
+    expect(envio?.corpo).toEqual({ imagem: "AAAA", tipo: "image/jpeg", questoes: 3 });
+  });
+
+  it("mostra o erro quando a leitura da foto falha", async () => {
+    const user = userEvent.setup();
+    montar(<Incluir aoVoltar={vi.fn()} aoGravar={vi.fn()} />);
+    await escolherProva(user);
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    await screen.findByRole("group", { name: "Respostas" });
+    const base = fetch as unknown as ReturnType<typeof vi.fn>;
+    const normal = base.getMockImplementation() as (u: string, i?: RequestInit) => Promise<Response>;
+    base.mockImplementation(async (url: string, init?: RequestInit) =>
+      url === "/folha/foto"
+        ? resposta({ detail: "Tire outra foto com a folha inteira." }, 422)
+        : normal(url, init),
+    );
+
+    await user.upload(
+      screen.getByLabelText(/Ler de uma foto/),
+      new File(["x"], "folha.jpg", { type: "image/jpeg" }),
+    );
+    expect(await screen.findByText("Tire outra foto com a folha inteira.")).toBeInTheDocument();
   });
 
   it("guarda o rascunho no navegador e retoma de onde parou", async () => {

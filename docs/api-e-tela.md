@@ -39,8 +39,19 @@ ano -> área    grade com 1 linha       resumo: marcadas,   acertos, referência
 (`LC`, `CH`, `CN`, `MT` ou o nome), língua, código do caderno e a sequência (`A`–`E`, `.` branco,
 `*` dupla), escolhe tudo e abre a grade já preenchida. O que protege de erro: o código só vale se
 existir no ano e na área (senão avisa e não avança) e a sequência precisa ter o tamanho da prova.
-É só texto no navegador; nada novo na API. Próximo passo, a foto da folha: ler as marcações com
-visão computacional e **sempre** mostrar a grade preenchida para o aluno conferir antes de gravar.
+É só texto no navegador; nada novo na API.
+
+**Foto da folha (feito).** No passo 2, "Ler de uma foto da minha folha". O navegador reduz a foto
+(lado maior 2000 px, JPEG) e manda `POST /folha/foto` com `{imagem (base64), tipo, questoes}`; a IA
+(`FOTO_MODELO`, padrão `claude-sonnet-5-5`) só transcreve as marcações e devolve uma posição por
+questão (`A`–`E`, `.` branco, `*` dupla, `?` ilegível). A trava do servidor exige exatamente `questoes`
+posições válidas; o que não passa vira 422 com orientação para tirar outra foto. Regras: a foto não é
+guardada (a auditoria `ler_foto` guarda só `{questoes}`); a IA é instruída a ignorar nome, CPF e
+inscrição, e a tela pede para cobrir ou recortar; o aluno logado tem 20 leituras por dia (429
+depois); sem chave da IA a rota responde 503 e a tela segue com grade e colagem. Na tela, a foto só
+preenche as questões ainda sem resposta (nada que o aluno marcou é sobrescrito), as ilegíveis ficam
+sem resposta e um aviso pede para conferir tudo com a folha na mão antes de gravar. Limite
+conhecido: leituras que falham (502/422) não entram na contagem do dia, pois a transação é desfeita.
 
 **Passo 2 – Respostas.** Grade com uma linha por questão, na ordem do caderno (45; em LC são as 5 da
 língua mais as 40 comuns). Cada linha tem as opções A B C D E, "em branco" e "dupla marcação".

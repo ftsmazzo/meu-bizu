@@ -11,6 +11,7 @@ import {
   type Folha,
   type Marca,
 } from "../folha";
+import { prepararFoto } from "../foto";
 import { AREAS } from "../rotulos";
 import { Grade } from "./Grade";
 
@@ -197,6 +198,25 @@ export function Incluir(props: Props) {
       void cliente.invalidateQueries({ queryKey: ["perfil"] });
       if (!edicao) guardarRascunho(null);
       props.aoGravar(resultado.id);
+    },
+  });
+
+  // A foto só preenche o que ainda está sem resposta: nada do que o aluno marcou é sobrescrito.
+  const foto = useMutation({
+    mutationFn: async (arquivo: File) => {
+      const preparada = await prepararFoto(arquivo);
+      return api.lerFoto({ ...preparada, questoes: r.folha.length });
+    },
+    onSuccess: ({ respostas }) => {
+      const lida = folhaDeTexto(respostas);
+      setR((a) => ({ ...a, folha: a.folha.map((m, i) => m ?? lida[i] ?? null) }));
+      const ilegiveis = lida.filter((m) => m === null).length;
+      setAviso(
+        "Li a foto. Confira cada resposta com a sua folha na mão antes de gravar." +
+          (ilegiveis > 0
+            ? ` ${ilegiveis} ${ilegiveis === 1 ? "questão não deu" : "questões não deram"} para ler e ficaram sem resposta.`
+            : ""),
+      );
     },
   });
 
@@ -390,6 +410,28 @@ export function Incluir(props: Props) {
               <p className="mudo">
                 Respondidas: {r.folha.length - conta.faltam} de {r.folha.length}
               </p>
+              <section className="card colagem">
+                <label>
+                  Ler de uma foto da minha folha
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={foto.isPending}
+                    onChange={(e) => {
+                      const arquivo = e.target.files?.[0];
+                      e.target.value = ""; // permite escolher a mesma foto de novo
+                      if (arquivo) foto.mutate(arquivo);
+                    }}
+                  />
+                  <small>
+                    Fotografe a folha inteira, reta e bem iluminada. A IA lê as marcações, preenche só
+                    o que está sem resposta e você confere. A foto não fica guardada. Se tiver nome ou
+                    CPF na folha, cubra ou recorte.
+                  </small>
+                </label>
+                {foto.isPending && <p className="carregando">Lendo a foto…</p>}
+                {foto.isError && <p className="erro">{foto.error.message}</p>}
+              </section>
               <Grade questoes={questoes.data} folha={r.folha} aoMarcar={marcar} />
             </>
           )}

@@ -220,6 +220,9 @@ export const api = {
   municipios: (ano: number, uf: string) =>
     pedir<MunicipioComDados[]>(`/geo/municipios?ano=${ano}&uf=${uf}`),
   raioX: (pedido: PedidoRaioX) => pedir<RaioX>("/raio-x", "POST", pedido),
+  /** `respostas` tem uma posição por questão; `?` é a que a IA não conseguiu ler. */
+  lerFoto: (foto: { imagem: string; tipo: string; questoes: number }) =>
+    pedir<{ respostas: string }>("/folha/foto", "POST", foto),
   relatorio: (area: Area | null) =>
     pedir<{ texto: string; origem: "ia" | "padrao" }>(
       area ? `/relatorio?area=${area}` : "/relatorio",
