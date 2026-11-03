@@ -1152,8 +1152,8 @@ summary {
     grid-column: 1 / -1;
   }
 
-  /* Evolução: duas colunas em tela média... */
-  .painel.evolucao {
+  /* Cartões por área (evolução e Raio-X): duas colunas em tela média... */
+  .painel {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1169,13 +1169,21 @@ summary {
 /* ...e uma linha só quando há espaço: as quatro áreas lado a lado. Com menos áreas, os cartões
    se esticam (auto-fit) em vez de deixar vão. */
 @media (min-width: 940px) {
-  .painel.evolucao {
+  .painel {
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
 
-  .painel.evolucao .linha-nota {
+  .painel .linha-nota {
     gap: 12px;
   }
+}
+
+/* Número grande com legenda, nos cartões por área do Raio-X. */
+.destaque-num {
+  font-size: 1.7rem;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
 }
 
 @media (prefers-reduced-motion: reduce) {

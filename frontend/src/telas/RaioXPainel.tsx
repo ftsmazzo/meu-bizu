@@ -78,12 +78,21 @@ export function RaioXPainel({
             </h3>
             <div className="linha-nota">
               <Anel
+                tamanho={80}
                 valor={a.nota}
                 rotulo={`Nota em ${nomeDaArea(a.area)}: ${Math.round(a.nota)}`}
               />
-              <p className="mudo" style={{ margin: 0 }}>
-                {frasePosicao(a)}
-              </p>
+              {a.a_frente_de !== null && a.a_frente_de > 0 ? (
+                <div className="nota-info">
+                  <span className="rotulo-nota">Pelo menos</span>
+                  <b className="destaque-num">{a.a_frente_de}%</b>
+                  <small>à frente dos participantes</small>
+                </div>
+              ) : (
+                <p className="mudo" style={{ margin: 0 }}>
+                  {frasePosicao(a)}
+                </p>
+              )}
             </div>
           </button>
         ))}
@@ -248,29 +257,6 @@ function DetalheArea({ a }: { a: AreaRaioX }) {
         )}
       </section>
 
-      {a.brasil && (
-        <section className="card largo">
-          <h3>Seu ranking</h3>
-          <ul className="barras">
-            {[a.brasil, a.uf, a.municipio].map(
-              (p) =>
-                p && (
-                  <BarraPosicao
-                    key={p.nome}
-                    rotulo={p.nome}
-                    aFrenteDe={p.a_frente_de}
-                    n={p.n}
-                  />
-                ),
-            )}
-          </ul>
-          <small>
-            Mostramos o piso: “pelo menos X%” é o maior marco de 5 em 5 que a sua
-            nota já alcançou. Estado e município são os do local da prova.
-          </small>
-        </section>
-      )}
-
       <section className="card">
         <h3>O que esperar da prova</h3>
         <p>
@@ -295,6 +281,29 @@ function DetalheArea({ a }: { a: AreaRaioX }) {
           </p>
         )}
       </section>
+
+      {a.brasil && (
+        <section className="card largo">
+          <h3>Seu ranking</h3>
+          <ul className="barras">
+            {[a.brasil, a.uf, a.municipio].map(
+              (p) =>
+                p && (
+                  <BarraPosicao
+                    key={p.nome}
+                    rotulo={p.nome}
+                    aFrenteDe={p.a_frente_de}
+                    n={p.n}
+                  />
+                ),
+            )}
+          </ul>
+          <small>
+            Mostramos o piso: “pelo menos X%” é o maior marco de 5 em 5 que a sua
+            nota já alcançou. Estado e município são os do local da prova.
+          </small>
+        </section>
+      )}
 
       {a.sua_prova && <Perdidas prova={a.sua_prova} />}
 
