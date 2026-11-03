@@ -19,11 +19,12 @@ export function Evolucao({ areas, provas = [], aoVerFoco }: Props) {
         A nota estimada sai dos seus acertos e permite comparar provas de anos
         diferentes. É uma estimativa: diferenças pequenas podem ser só acaso.
       </p>
-      <div className="painel">
+      <div className="painel evolucao">
         {areas.map((a) => {
           const pontos = provas
             .filter((p) => p.area === a.area && p.nota_estimada !== null)
             .map((p) => p.nota_estimada as number);
+          const contagem = `${a.provas} ${a.provas === 1 ? "prova" : "provas"}`;
           return (
             <section
               key={a.area}
@@ -32,13 +33,14 @@ export function Evolucao({ areas, provas = [], aoVerFoco }: Props) {
             >
               <header className="card-topo">
                 <span className="chip-area">{nomeDaArea(a.area)}</span>
-                <span className="contagem">{`${a.provas} ${a.provas === 1 ? "prova" : "provas"}`}</span>
+                {a.ultima === null && <span className="contagem">{contagem}</span>}
               </header>
               <div className="linha-nota">
                 {a.ultima === null ? (
                   <p className="mudo">Sem nota estimada</p>
                 ) : (
                   <Anel
+                    tamanho={80}
                     valor={a.ultima}
                     rotulo={`Nota estimada em ${nomeDaArea(a.area)}: ${Math.round(a.ultima)}`}
                   />
@@ -46,6 +48,7 @@ export function Evolucao({ areas, provas = [], aoVerFoco }: Props) {
                 {a.ultima !== null && (
                   <div className="nota-info">
                     <span className="rotulo-nota">Nota estimada</span>
+                    <span className="contagem">{contagem}</span>
                     {pontos.length > 1 && (
                       <Sparkline
                         pontos={pontos}

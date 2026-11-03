@@ -183,6 +183,20 @@ button {
   padding: 8px 14px;
 }
 
+/* Campos preenchem a coluna em que estão. Sem isso, a largura própria do campo (cerca de 20
+   caracteres) estoura colunas estreitas e o formulário escapa do cartão. */
+input:not([type="checkbox"], [type="radio"]),
+select,
+textarea {
+  width: 100%;
+  min-width: 0;
+}
+
+label,
+.campos-nota > * {
+  min-width: 0;
+}
+
 textarea {
   width: 100%;
   resize: vertical;
@@ -794,9 +808,18 @@ summary {
 }
 
 .rotulo-nota {
-  color: var(--mudo);
-  font-size: 0.82rem;
-  font-weight: 600;
+  color: var(--texto);
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.nota-info .contagem {
+  font-weight: 500;
+}
+
+.chip-area {
+  white-space: nowrap;
 }
 
 .variacao {
@@ -1129,12 +1152,29 @@ summary {
     grid-column: 1 / -1;
   }
 
+  /* Evolução: duas colunas em tela média... */
+  .painel.evolucao {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   /* Em tela larga o cartão da prova cabe numa linha só. */
   .prova {
     grid-template-columns: auto minmax(0, 1.1fr) minmax(0, 1fr) auto auto;
     grid-template-areas: "sigla titulo acertos nota acoes";
     gap: 18px;
     padding: 14px 18px 14px 22px;
+  }
+}
+
+/* ...e uma linha só quando há espaço: as quatro áreas lado a lado. Com menos áreas, os cartões
+   se esticam (auto-fit) em vez de deixar vão. */
+@media (min-width: 940px) {
+  .painel.evolucao {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+
+  .painel.evolucao .linha-nota {
+    gap: 12px;
   }
 }
 
