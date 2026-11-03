@@ -116,7 +116,7 @@ caminho leva id de aluno): `POST /conta/cadastro`, `POST /conta/entrar`, `POST /
 relatório por IA fica para a F5.
 
 **Raio-X pela nota (feito):** `POST /raio-x` com `{ano, notas: {LC?, CH?, CN?, MT?}, lingua?}`
-(login exigido; nada é gravado). Para cada área devolve o grupo de 10% em que a nota cai e a
+(login exigido; só o **pedido** é guardado, veja abaixo). Para cada área devolve o grupo de 10% em que a nota cai e a
 frente de quantos participantes ela está (`a_frente_de`), o próximo degrau (meio do grupo
 seguinte), o total esperado de acertos, as questões da prova do ano separadas em seguras, ao
 alcance e difíceis, as habilidades em que mais se ganha ao subir um degrau (`foco`) e até 5
@@ -125,6 +125,13 @@ questões ao alcance, com o texto (nunca o gabarito). A chance de cada questão 
 contam. É uma leitura descritiva ("o que costuma acontecer com quem tem a sua nota"), não um
 diagnóstico das respostas. Link do INEP para consultar a nota:
 `https://enem.inep.gov.br/participante/` (o produto nunca pede a senha do gov.br).
+
+**Raio-X guardado (feito, migração 005):** cada `POST /raio-x` bem-sucedido guarda o pedido (ano,
+notas, língua, estado, município) em `app.raiox_salvo`, um por aluno e ano (o mais novo substitui o
+anterior). Guarda-se o pedido, não o resultado: ao reabrir, o Raio-X é refeito e já sai atualizado
+com as provas de hoje. `GET /raio-x/salvos` lista os pedidos, do mais recente ao mais antigo. A tela
+reabre sozinha o último ao entrar, "Refazer com outras notas" volta ao formulário preenchido e
+escolher um ano já gerado traz as mesmas notas e o mesmo local. Isolado por aluno (RLS, com teste).
 
 **Cruzamento com as provas incluídas (feito):** se o aluno já gravou uma prova do mesmo ano e área
 (a mais recente; em LC, da mesma língua), `POST /raio-x` devolve em cada área `sua_prova` com

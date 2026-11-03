@@ -185,6 +185,11 @@ export interface PedidoRaioX {
   municipio: string | null;
 }
 
+/** Um Raio-X que o aluno já gerou: o pedido, para reabrir sem digitar tudo de novo. */
+export interface PedidoSalvo extends PedidoRaioX {
+  atualizado_em: string;
+}
+
 export class ErroApi extends Error {
   constructor(
     readonly status: number,
@@ -248,6 +253,8 @@ export const api = {
   municipios: (ano: number, uf: string) =>
     pedir<MunicipioComDados[]>(`/geo/municipios?ano=${ano}&uf=${uf}`),
   raioX: (pedido: PedidoRaioX) => pedir<RaioX>("/raio-x", "POST", pedido),
+  /** Do mais recente para o mais antigo; um por ano. */
+  raioXSalvos: () => pedir<PedidoSalvo[]>("/raio-x/salvos"),
   /** `respostas` tem uma posição por questão; `?` é a que a IA não conseguiu ler. */
   lerFoto: (foto: { imagem: string; tipo: string; questoes: number }) =>
     pedir<{ respostas: string }>("/folha/foto", "POST", foto),

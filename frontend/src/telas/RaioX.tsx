@@ -1,7 +1,7 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
-import { api, type Area } from "../api";
+import { api, type Area, type PedidoRaioX } from "../api";
 import { AREAS, estiloArea } from "../rotulos";
 import { RaioXPainel } from "./RaioXPainel";
 
@@ -41,8 +41,42 @@ export function RaioX({ aoVoltar, aoIncluirProva, aoVerDiagnostico }: Props) {
     queryFn: () => api.municipios(ano as number, uf),
     enabled: ano !== null && uf !== "",
   });
-  const raiox = useMutation({ mutationFn: api.raioX });
+  const cliente = useQueryClient();
+  const raiox = useMutation({
+    mutationFn: api.raioX,
+    onSuccess: () => void cliente.invalidateQueries({ queryKey: ["raiox-salvos"] }),
+  });
   const provas = useQuery({ queryKey: ["provas"], queryFn: api.provas });
+  const salvos = useQuery({ queryKey: ["raiox-salvos"], queryFn: api.raioXSalvos });
+
+  function preencher(p: PedidoRaioX) {
+    setAno(p.ano);
+    setTextos(
+      Object.fromEntries(Object.entries(p.notas).map(([area, valor]) => [area, nota1(valor)])),
+    );
+    setLingua(p.lingua);
+    setUf(p.uf ?? "");
+    setMunicipio(p.municipio ?? "");
+  }
+
+  // Ao abrir a tela, reabre sozinho o último Raio-X (refeito, então já sai com as provas de hoje).
+  // Só na primeira carga: depois disso o aluno manda, e gerar de novo não pode reabrir nada.
+  const jaAbriu = useRef(false);
+  useEffect(() => {
+    if (jaAbriu.current || !salvos.data) return;
+    jaAbriu.current = true;
+    const ultimo = salvos.data[0];
+    if (!ultimo) return;
+    const pedido = {
+      ano: ultimo.ano,
+      notas: ultimo.notas,
+      lingua: ultimo.lingua,
+      uf: ultimo.uf,
+      municipio: ultimo.municipio,
+    };
+    preencher(ultimo);
+    raiox.mutate(pedido);
+  }, [salvos.data]);
 
   // A prova mais recente de cada área no ano escolhido (a lista vem em ordem de data).
   const doAno = new Map<Area, NonNullable<typeof provas.data>[number]>();
@@ -117,7 +151,13 @@ export function RaioX({ aoVoltar, aoIncluirProva, aoVerDiagnostico }: Props) {
           <select
             value={ano ?? ""}
             onChange={(e) => {
-              setAno(e.target.value ? Number(e.target.value) : null);
+              const novo = e.target.value ? Number(e.target.value) : null;
+              const guardado = salvos.data?.find((p) => p.ano === novo);
+              if (guardado) {
+                preencher(guardado); // já gerou este ano: volta com as mesmas notas e local
+                return;
+              }
+              setAno(novo);
               setUf("");
               setMunicipio("");
             }}

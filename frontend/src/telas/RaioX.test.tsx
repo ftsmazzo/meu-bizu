@@ -49,16 +49,19 @@ const MT = {
 let corpos: unknown[] = [];
 let provasGravadas: unknown[] = [];
 let areaDoMock: unknown = MT;
+let pedidosSalvos: unknown[] = [];
 
 beforeEach(() => {
   corpos = [];
   provasGravadas = [];
   areaDoMock = MT;
+  pedidosSalvos = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string, init?: RequestInit) => {
       if (url === "/anos") return new Response(JSON.stringify([2022, 2023]));
       if (url === "/provas") return new Response(JSON.stringify(provasGravadas));
+      if (url === "/raio-x/salvos") return new Response(JSON.stringify(pedidosSalvos));
       if (url === "/geo/ufs?ano=2023") {
         return new Response(JSON.stringify([{ uf: "RJ", n: 90000 }, { uf: "SP", n: 150000 }]));
       }
@@ -247,6 +250,49 @@ describe("Raio-X pela nota", () => {
     expect(within(perdidas).getByText("Você deixou em branco")).toBeInTheDocument();
     expect(within(perdidas).getByText("Quanto é 3+3?")).toBeInTheDocument();
     expect(within(perdidas).getByText(/E mais 2 questões desse tipo/)).toBeInTheDocument();
+  });
+
+  it("reabre sozinho o último Raio-X guardado e volta ao formulário já preenchido", async () => {
+    pedidosSalvos = [
+      {
+        ano: 2023,
+        notas: { MT: 640 },
+        lingua: null,
+        uf: null,
+        municipio: null,
+        atualizado_em: "2026-11-03T12:00:00Z",
+      },
+    ];
+    const user = userEvent.setup();
+    montar();
+
+    expect(
+      await screen.findByRole("heading", { name: "Seu Raio-X do Enem 2023" }),
+    ).toBeInTheDocument();
+    // refeito com o pedido guardado, sem o carimbo de data
+    expect(corpos).toEqual([
+      { ano: 2023, notas: { MT: 640 }, lingua: null, uf: null, municipio: null },
+    ]);
+
+    await user.click(screen.getByRole("button", { name: "Refazer com outras notas" }));
+    expect(screen.getByLabelText("Matemática")).toHaveValue("640");
+    expect(screen.getByLabelText("Ano do Enem")).toHaveValue("2023");
+    expect(corpos).toHaveLength(1); // voltar ao formulário não gera outro
+  });
+
+  it("sem Raio-X guardado abre o formulário vazio e gerar um não reabre nada depois", async () => {
+    const user = userEvent.setup();
+    montar();
+    await screen.findByRole("option", { name: "2023" });
+    expect(screen.getByRole("button", { name: "Ver meu Raio-X" })).toBeDisabled();
+    await user.selectOptions(screen.getByLabelText("Ano do Enem"), "2023");
+    await user.type(screen.getByLabelText("Matemática"), "640");
+    pedidosSalvos = [{ ano: 2023, notas: { MT: 640 }, lingua: null, uf: null, municipio: null }];
+    await user.click(screen.getByRole("button", { name: "Ver meu Raio-X" }));
+    await screen.findByRole("heading", { name: "Seu Raio-X do Enem 2023" });
+    await user.click(screen.getByRole("button", { name: "Refazer com outras notas" }));
+    expect(screen.getByRole("button", { name: "Ver meu Raio-X" })).toBeInTheDocument();
+    expect(corpos).toHaveLength(1);
   });
 
   it("não mostra pontos que escaparam quando não há prova incluída", async () => {

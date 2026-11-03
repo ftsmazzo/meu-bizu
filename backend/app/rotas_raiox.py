@@ -1,11 +1,12 @@
 """Raio-X pela nota do aluno logado. Só lê a base de referência: nada é gravado."""
 
+from datetime import datetime
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
 
-from app import auth, provas, repositorio
+from app import auth, provas, repo_raiox, repositorio
 from app.correcao import ProvaInvalida, avaliar_prova
 from app.raiox import a_frente_de, analisar_area, cruzar
 from app.rotas_provas import Area
@@ -31,6 +32,12 @@ class RaioXEntrada(BaseModel):
         if any(not 0 <= n <= 1000 for n in v.values()):
             raise ValueError("a nota vai de 0 a 1000")
         return v
+
+
+class PedidoSalvo(RaioXEntrada):
+    """Um pedido que o aluno já fez, para reabrir o Raio-X sem pedir tudo de novo."""
+
+    atualizado_em: datetime
 
 
 class Enunciado(BaseModel):
@@ -181,8 +188,18 @@ def _enunciado(t: dict | None) -> Enunciado | None:
     )
 
 
+@router.get("/raio-x/salvos")
+def pedidos_salvos(sessao: Sessao) -> list[PedidoSalvo]:
+    """Os Raio-X que o aluno já gerou (um por ano), do mais recente para o mais antigo."""
+    return [
+        PedidoSalvo(**pedido, atualizado_em=quando)
+        for pedido, quando in repo_raiox.listar(sessao.conn)
+    ]
+
+
 @router.post("/raio-x")
 def raio_x(corpo: RaioXEntrada, sessao: Sessao) -> RaioX:
+    """Gera o Raio-X e guarda o pedido (não o resultado) para reabrir depois, sempre atualizado."""
     conn = sessao.conn
     if "LC" in corpo.notas and corpo.lingua is None:
         raise HTTPException(422, "em Linguagens informe a língua (0 inglês, 1 espanhol)")
@@ -255,4 +272,5 @@ def raio_x(corpo: RaioXEntrada, sessao: Sessao) -> RaioX:
                 ),
             )
         )
+    repo_raiox.guardar(conn, corpo.ano, corpo.model_dump(mode="json"))
     return RaioX(ano=corpo.ano, areas=areas)

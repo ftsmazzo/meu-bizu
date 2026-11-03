@@ -209,6 +209,45 @@ def test_raiox_cruzamento_so_olha_as_provas_do_proprio_aluno(conn, cliente):
     assert mt["sua_prova"] is None
 
 
+def test_raiox_gerado_fica_guardado_um_por_ano_e_o_ultimo_substitui(cliente):
+    assert cliente.get("/raio-x/salvos").json() == []
+    cliente.post("/raio-x", json={"ano": 2023, "notas": {"MT": 500}, "uf": "SP"})
+    cliente.post("/raio-x", json={"ano": 2023, "notas": {"MT": 600}})
+    (salvo,) = cliente.get("/raio-x/salvos").json()
+    assert salvo["ano"] == 2023 and salvo["notas"] == {"MT": 600}
+    assert salvo["uf"] is None and salvo["lingua"] is None and salvo["atualizado_em"]
+
+
+def test_raiox_que_falha_nao_e_guardado(cliente):
+    assert cliente.post("/raio-x", json={"ano": 2023, "notas": {"CH": 500}}).status_code == 404
+    assert cliente.get("/raio-x/salvos").json() == []
+
+
+def test_raiox_guardado_e_privado_de_cada_aluno(cliente):
+    cliente.post("/raio-x", json={"ano": 2023, "notas": {"MT": 500}})
+    outro = TestClient(app, base_url="https://testserver")
+    outro.post(
+        "/conta/cadastro",
+        json={"email": "bruno@exemplo.com", "nome": "B", "senha": SENHA, "maior_de_18": True},
+    ).raise_for_status()
+    assert outro.get("/raio-x/salvos").json() == []
+    assert len(cliente.get("/raio-x/salvos").json()) == 1
+
+
+def test_raiox_salvos_exige_login(conn, ref_csv):
+    carregar_ref(conn, ref_csv)
+    conn.commit()
+    conn.execute("set role meubizu_app")
+    conn.commit()
+    app.dependency_overrides[get_conn] = lambda: conn
+    try:
+        assert (
+            TestClient(app, base_url="https://testserver").get("/raio-x/salvos").status_code == 401
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_raiox_devolve_o_texto_da_questao_que_esta_ao_alcance(cliente):
     (mt,) = cliente.post("/raio-x", json={"ano": 2023, "notas": {"MT": 500}}).json()["areas"]
     com_texto = [q for q in mt["alcance"] if q["questao"]]
