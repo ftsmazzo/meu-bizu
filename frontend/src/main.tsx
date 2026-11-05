@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 
 import { App } from "./App";
 import "./estilo.css";
+import "./bizu.css";
 
 const cliente = new QueryClient({
   defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
@@ -16,3 +17,5 @@ createRoot(document.getElementById("raiz")!).render(
     </QueryClientProvider>
   </StrictMode>,
 );
+
+

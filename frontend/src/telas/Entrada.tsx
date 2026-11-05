@@ -27,8 +27,9 @@ export function Entrada({ aoEntrar }: { aoEntrar: () => void }) {
     <main className="entrada-tela">
       <div className="entrada-cartao">
         <Marca />
-        <h1 style={{ marginTop: 18 }}>{criando ? "Crie a sua conta" : "Bem-vindo de volta"}</h1>
-        <p className="sub">Descubra com dados oficiais onde focar nos estudos para o Enem.</p>
+        <h1 style={{ marginTop: 18 }}>{criando ? "Comece pela sua conta." : "Sua prova merece uma análise."}</h1>
+        <p className="sub">Entre para inserir as notas e respostas do aluno, gerar o Raio-X e comparar com Brasil, estado e município.</p>
+        {!criando && <p className="entrada-integrada">Use sua conta do Meu Bizu. Se ainda não tiver uma, crie abaixo para começar.</p>}
       <form onSubmit={submeter}>
         {criando && (
           <label>
@@ -70,7 +71,7 @@ export function Entrada({ aoEntrar }: { aoEntrar: () => void }) {
           className="primario"
           disabled={enviar.isPending || (criando && !maior)}
         >
-          {criando ? "Criar conta" : "Entrar"}
+          {enviar.isPending ? "Conectando…" : criando ? "Criar conta" : "Entrar e começar"}
         </button>
       </form>
       <button type="button" className="link" onClick={() => setCriando(!criando)}>
@@ -80,3 +81,5 @@ export function Entrada({ aoEntrar }: { aoEntrar: () => void }) {
     </main>
   );
 }
+
+
