@@ -25,7 +25,17 @@ A branch de implementação é separada de `main`; a publicação no projeto Biz
 
 Novos testes verificam sequência e completude das respostas; ordem de gravação/correção antes do Raio-X; notas oficiais versus estimadas; retomada após falha; localização; validação de entrada; e os passos da interface. A suíte existente continua cobrindo conta, acesso entre usuários, provas, perfil e comparativos.
 
+## Módulos de estratégia mantidos na mesma aplicação
+
+A navegação também inclui mapa de habilidades, cenários Sisu, meta por curso, plano da semana e base/método. A conclusão da análise oferece um caminho direto para os cenários e para o plano.
+
+O mapa e o plano leem `/perfil`. Os cenários importam as quatro notas de `/raio-x/salvos`, sem inventar a Redação, e usam um conjunto completo por edição para comparar pesos, mínimos e referências. O cálculo permite configurar bônus e calcula uma nota condicional por área para alcançar a referência. Não decide direito a cotas ou bônus e não garante aprovação.
+
+Ofertas, Redação, hipóteses, disponibilidade e marcações do plano ficam no navegador, com chave separada por usuário, e podem ser exportadas/importadas. Os dados não substituem provas e notas guardadas no servidor. O cadastro de ofertas começa vazio; os quatro exemplos fictícios exigem ação explícita e permanecem identificados.
+
+Não existe uma carga validada do catálogo oficial Sisu nesta entrega. O portal `https://dadosabertos.mec.gov.br/sisu` foi localizado como fonte histórica; seus recursos ainda precisam ser ingeridos e conferidos antes de alimentar ofertas e cortes automaticamente. O campo de fonte de uma oferta é informativo, não uma certificação automática.
+
 ## Limites preservados
 
-O método analítico é o mesmo do backend atual. Esta entrega torna o produto operável e integrado, sem apresentar o protótipo com cenários fictícios como análise de um aluno. Validação estatística adicional, tratamento de amostras pequenas, referência Sisu e gestão multiusuário de mentores continuam sendo evoluções distintas.
+O método analítico é o mesmo do backend atual. Esta entrega torna o produto operável e integrado, sem apresentar o protótipo com cenários fictícios como análise de um aluno. Validação estatística adicional, tratamento de amostras pequenas, ingestão da referência oficial Sisu e gestão multiusuário de mentores continuam sendo evoluções distintas.
 

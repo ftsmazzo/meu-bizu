@@ -23,10 +23,12 @@ interface Props {
   aoVoltar: () => void;
   aoIncluirProva: () => void;
   aoVerDiagnostico: (area: Area) => void;
+  aoCenarios?: () => void;
+  aoPlano?: () => void;
 }
 
 /** Fluxo real, autenticado, sem notas ou folhas pré-preenchidas. */
-export function NovaAnalise({ aoVoltar, aoIncluirProva, aoVerDiagnostico }: Props) {
+export function NovaAnalise({ aoVoltar, aoIncluirProva, aoVerDiagnostico, aoCenarios, aoPlano }: Props) {
   const cliente = useQueryClient();
   const [passo, setPasso] = useState(1);
   const [ano, setAno] = useState<number | null>(null);
@@ -118,6 +120,7 @@ export function NovaAnalise({ aoVoltar, aoIncluirProva, aoVerDiagnostico }: Prop
         return ausentes.length ? <p className="aviso-suave" key={a.area}>{nomeDaArea(a.area)}: referência não disponível para {ausentes.join(", ")} nesta edição.</p> : null;
       })}
       <RaioXPainel dados={resultado.dados} aoVoltar={aoVoltar} aoRefazer={() => { gerar.reset(); ir(1); }} aoIncluirProva={aoIncluirProva} areasComProva={areasComProva} aoVerDiagnostico={aoVerDiagnostico} />
+      <section className="card proximo-estrategia"><div><span className="sobretitulo">CONTINUAR A PARTIR DO SEU RESULTADO</span><h2>Agora, escolha o próximo passo.</h2><p>Leve as notas para os cenários por curso e use suas habilidades para organizar a revisão.</p></div><div className="acoes">{aoCenarios&&<button type="button" className="primario" onClick={aoCenarios}>Comparar cenários Sisu →</button>}{aoPlano&&<button type="button" onClick={aoPlano}>Montar plano da semana →</button>}</div></section>
     </div>}
   </div>;
 }

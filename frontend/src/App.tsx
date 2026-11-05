@@ -5,6 +5,7 @@ import { api, type Area } from "./api";
 import { Entrada } from "./telas/Entrada";
 import { Incluir } from "./telas/Incluir";
 import { Inicio } from "./telas/Inicio";
+import { Estrategia, type SecaoEstrategia } from "./telas/Estrategia";
 import { NovaAnalise } from "./telas/NovaAnalise";
 import { PerfilPorArea } from "./telas/PerfilPorArea";
 import { RaioX } from "./telas/RaioX";
@@ -15,6 +16,7 @@ import { Marca } from "./ui/Marca";
 type Tela =
   | { nome: "inicio" }
   | { nome: "analise" }
+  | { nome: SecaoEstrategia }
   | { nome: "incluir" }
   | { nome: "raiox" }
   | { nome: "resultado"; id: string }
@@ -53,7 +55,7 @@ export function App() {
   const inicio = () => setTela({ nome: "inicio" });
   const incluir = () => setTela({ nome: "incluir" });
   const resultado = (id: string) => setTela({ nome: "resultado", id });
-  const nomes: Record<Tela["nome"], string> = { inicio: "Visão geral", analise: "Nova análise", incluir: "Incluir prova", raiox: "Raio-X pela nota", resultado: "Resultado da prova", corrigir: "Corrigir prova", foco: "Onde focar", relatorio: "Relatório" };
+  const nomes: Record<Tela["nome"], string> = { inicio: "Visão geral", analise: "Nova análise", incluir: "Incluir prova", raiox: "Raio-X pela nota", resultado: "Resultado da prova", corrigir: "Corrigir prova", foco: "Onde focar", relatorio: "Relatório", ingresso: "Cenários Sisu", habilidades: "Mapa de habilidades", plano: "Plano da semana", metodo: "Base e método" };
   return (
     <div className="bizu-shell">
       <aside className="bizu-sidebar"><a href="#inicio" onClick={e => { e.preventDefault(); inicio(); }} aria-label="Meu Bizu, início"><Marca /></a><p className="bizu-slogan">DA PROVA AO PRÓXIMO PASSO.</p><span className="bizu-nav-label">SEU ENEM</span><nav aria-label="Navegação principal">
@@ -61,6 +63,10 @@ export function App() {
         <button className={tela.nome === "analise" ? "ativo" : ""} onClick={() => setTela({ nome: "analise" })}><span>＋</span> Nova análise</button>
         <button className={tela.nome === "incluir" ? "ativo" : ""} onClick={incluir}><span>▤</span> Incluir prova</button>
         <button className={tela.nome === "raiox" ? "ativo" : ""} onClick={() => setTela({ nome: "raiox" })}><span>◎</span> Raio-X pela nota</button>
+        <button className={tela.nome === "habilidades" ? "ativo" : ""} onClick={() => setTela({ nome: "habilidades" })}><span>⌁</span> Mapa de habilidades</button>
+        <button className={tela.nome === "ingresso" ? "ativo" : ""} onClick={() => setTela({ nome: "ingresso" })}><span>◇</span> Cenários Sisu</button>
+        <button className={tela.nome === "plano" ? "ativo" : ""} onClick={() => setTela({ nome: "plano" })}><span>☑</span> Plano da semana</button>
+        <button className={tela.nome === "metodo" ? "ativo" : ""} onClick={() => setTela({ nome: "metodo" })}><span>▥</span> Base e método</button>
       </nav><div className="bizu-sidebar-base"><strong>Referência do INEP</strong><p>Notas, questões e comparativos calculados com a base do Enem.</p><div className="bizu-usuario"><span>{eu.data.nome.slice(0, 1).toUpperCase()}</span><div><strong>{eu.data.nome}</strong><button type="button" onClick={() => sair.mutate()}>Sair da conta</button></div></div></div></aside>
       <div className="bizu-body"><header className="bizu-topbar"><span>Meu caminho <b>/</b> <strong>{nomes[tela.nome]}</strong></span><span className="bizu-live">● Conectado à base do Enem</span></header>
       <main className="app bizu-content">
@@ -70,12 +76,16 @@ export function App() {
           aoIncluir={incluir}
           aoRaioX={() => setTela({ nome: "raiox" })}
           aoNovaAnalise={() => setTela({ nome: "analise" })}
+          aoCenarios={() => setTela({ nome: "ingresso" })}
+          aoPlano={() => setTela({ nome: "plano" })}
+          aoMapa={() => setTela({ nome: "habilidades" })}
           aoAbrir={resultado}
           aoVerFoco={(area) => setTela({ nome: "foco", area })}
           aoVerRelatorio={() => setTela({ nome: "relatorio", area: null })}
         />
       )}
-      {tela.nome === "analise" && <NovaAnalise aoVoltar={inicio} aoIncluirProva={incluir} aoVerDiagnostico={area => setTela({ nome: "foco", area })} />}
+      {tela.nome === "analise" && <NovaAnalise aoVoltar={inicio} aoIncluirProva={incluir} aoVerDiagnostico={area => setTela({ nome: "foco", area })} aoCenarios={() => setTela({ nome: "ingresso" })} aoPlano={() => setTela({ nome: "plano" })} />}
+      {["ingresso", "habilidades", "plano", "metodo"].includes(tela.nome) && <Estrategia secao={tela.nome as SecaoEstrategia} usuarioId={eu.data.id} aoAnalisar={() => setTela({ nome: "analise" })} aoRaioX={() => setTela({ nome: "raiox" })} aoDiagnostico={area => setTela({ nome: "foco", area })} />}
       {tela.nome === "raiox" && (
         <RaioX
           aoVoltar={inicio}

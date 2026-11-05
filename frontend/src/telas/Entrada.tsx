@@ -28,7 +28,7 @@ export function Entrada({ aoEntrar }: { aoEntrar: () => void }) {
       <div className="entrada-cartao">
         <Marca />
         <h1 style={{ marginTop: 18 }}>{criando ? "Comece pela sua conta." : "Sua prova merece uma análise."}</h1>
-        <p className="sub">Entre para inserir as notas e respostas do aluno, gerar o Raio-X e comparar com Brasil, estado e município.</p>
+        <p className="sub">Analise notas e respostas, compare com Brasil, estado e município e conecte o resultado aos cenários por curso e ao seu plano de estudo.</p>
         {!criando && <p className="entrada-integrada">Use sua conta do Meu Bizu. Se ainda não tiver uma, crie abaixo para começar.</p>}
       <form onSubmit={submeter}>
         {criando && (

@@ -9,6 +9,9 @@ interface Props {
   aoIncluir: () => void;
   aoRaioX: () => void;
   aoNovaAnalise?: () => void;
+  aoCenarios?: () => void;
+  aoPlano?: () => void;
+  aoMapa?: () => void;
   aoAbrir: (id: string) => void;
   aoVerFoco: (area: Area) => void;
   aoVerRelatorio: () => void;
@@ -19,6 +22,9 @@ export function Inicio({
   aoIncluir,
   aoRaioX,
   aoNovaAnalise,
+  aoCenarios,
+  aoPlano,
+  aoMapa,
   aoAbrir,
   aoVerFoco,
   aoVerRelatorio,
@@ -58,6 +64,7 @@ export function Inicio({
         </div>
       </section>
       <section className="como-analisar" aria-label="Como fazer uma análise"><article><span>01</span><h3>Informe notas e localização</h3><p>Escolha o ano, as notas, o estado e o município onde fez a prova.</p></article><article><span>02</span><h3>Insira as respostas do aluno</h3><p>Cole a sequência ou marque as alternativas do caderno correto.</p></article><article><span>03</span><h3>Apresente o Raio-X</h3><p>Veja a correção, as habilidades e os comparativos disponíveis para Brasil, estado e município.</p></article></section>
+      <section className="atalhos-estrategia" aria-label="Do diagnóstico à estratégia"><article><span className="sobretitulo">SEU DESTINO</span><h3>Compare cenários por curso.</h3><p>Use as notas do seu Raio-X, complete a Redação e explore pesos, mínimos e metas.</p><button type="button" onClick={aoCenarios}>Abrir cenários Sisu →</button></article><article><span className="sobretitulo">SEU PRÓXIMO PASSO</span><h3>Organize a revisão da semana.</h3><p>Conecte as habilidades das suas provas ao tempo que você tem para estudar.</p><button type="button" onClick={aoPlano}>Montar plano da semana →</button></article><article><span className="sobretitulo">SUA EVIDÊNCIA</span><h3>Veja o mapa de habilidades.</h3><p>Compare seus acertos com a referência e identifique o que ainda precisa investigar.</p><button type="button" onClick={aoMapa}>Abrir mapa de habilidades →</button></article></section>
 
       {areas.length > 0 && (
         <div className="stats">
