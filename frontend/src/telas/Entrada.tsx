@@ -5,7 +5,7 @@ import { api } from "../api";
 import { Marca } from "../ui/Marca";
 
 /** Entrar ou criar conta. O cadastro declara ter 18 anos ou mais (a API também exige). */
-export function Entrada({ aoEntrar }: { aoEntrar: () => void }) {
+export function Entrada({ aoEntrar, aoExplorar }: { aoEntrar: () => void; aoExplorar?: () => void }) {
   const [criando, setCriando] = useState(false);
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
@@ -77,6 +77,7 @@ export function Entrada({ aoEntrar }: { aoEntrar: () => void }) {
       <button type="button" className="link" onClick={() => setCriando(!criando)}>
         {criando ? "Já tenho conta" : "Criar uma conta"}
       </button>
+      {aoExplorar && <div className="entrada-explorar"><p>Quer apresentar os cálculos antes de entrar?</p><button type="button" onClick={aoExplorar}>Explorar cenários de ingresso →</button><small>Você informa as notas e ofertas. Provas, correção e histórico usam sua conta.</small></div>}
       </div>
     </main>
   );

@@ -5,14 +5,14 @@ import { AREAS, decimal, nomeDaArea } from "../rotulos";
 import { AREAS_INGRESSO, NOMES_INGRESSO, avaliarOferta, cinco, completas, melhorConjunto, metaInversa, planoReal, prioridadesReais, simularNotas, unirRaiox, validarEstrategia, validarOferta, vazioEstrategia, type AreaIngresso, type CincoNotas, type EstrategiaSalva, type Oferta } from "../estrategia";
 
 export type SecaoEstrategia = "ingresso" | "habilidades" | "plano" | "metodo";
-interface Props { secao: SecaoEstrategia; usuarioId: string; aoAnalisar: () => void; aoDiagnostico: (area: Area) => void; aoRaioX: () => void }
+interface Props { secao: SecaoEstrategia; usuarioId: string; modoLivre?: boolean; aoAnalisar: () => void; aoDiagnostico: (area: Area) => void; aoRaioX: () => void }
 function ler(id: string) { try { const s=localStorage.getItem(`bizu:estrategia:${id}`); return s?validarEstrategia(JSON.parse(s)):vazioEstrategia(); } catch { return vazioEstrategia(); } }
 const porcento=(n:number)=>`${Math.round(n*100)}%`;
 const sinal=(n:number)=>`${n>0?"+":""}${decimal(n)}`;
 const tituloRef={meta:"Meta pessoal",historico:"Referência histórica",parcial:"Corte parcial informado"};
 
-export function Estrategia({ secao,usuarioId,aoAnalisar,aoDiagnostico,aoRaioX }:Props) {
-  const [estado,setEstado]=useState<EstrategiaSalva>(()=>ler(usuarioId));
+export function Estrategia({ secao,usuarioId,modoLivre=false,aoAnalisar,aoDiagnostico,aoRaioX }:Props) {
+  const [estado,setEstado]=useState<EstrategiaSalva>(()=>modoLivre?vazioEstrategia():ler(usuarioId));
   const [erro,setErro]=useState("");
   const [aviso,setAviso]=useState("");
   const [editando,setEditando]=useState<Oferta|null>(null);
@@ -24,18 +24,18 @@ export function Estrategia({ secao,usuarioId,aoAnalisar,aoDiagnostico,aoRaioX }:
   const [uf,setUf]=useState("");
   const [areaMapa,setAreaMapa]=useState("");
   const arquivo=useRef<HTMLInputElement>(null);
-  const salvos=useQuery({queryKey:["raiox-salvos"],queryFn:api.raioXSalvos});
-  const perfil=useQuery({queryKey:["perfil"],queryFn:()=>api.perfil(null)});
+  const salvos=useQuery({queryKey:["raiox-salvos"],queryFn:api.raioXSalvos,enabled:!modoLivre});
+  const perfil=useQuery({queryKey:["perfil"],queryFn:()=>api.perfil(null),enabled:!modoLivre});
   const anos=useQuery({queryKey:["anos"],queryFn:api.anos});
-  useEffect(()=>{try{localStorage.setItem(`bizu:estrategia:${usuarioId}`,JSON.stringify(estado));}catch{setErro("O navegador não conseguiu guardar a estratégia. Exporte o arquivo para preservá-la.");}},[estado,usuarioId]);
-  useEffect(()=>{if(salvos.data)setEstado(e=>{const conjuntos=unirRaiox(e.conjuntos,salvos.data);return JSON.stringify(conjuntos)===JSON.stringify(e.conjuntos)?e:{...e,conjuntos};});},[salvos.data]);
+  useEffect(()=>{if(modoLivre)return;try{localStorage.setItem(`bizu:estrategia:${usuarioId}`,JSON.stringify(estado));}catch{setErro("O navegador não conseguiu guardar a estratégia. Exporte o arquivo para preservá-la.");}},[estado,usuarioId,modoLivre]);
+  useEffect(()=>{if(!modoLivre&&salvos.data)setEstado(e=>{const conjuntos=unirRaiox(e.conjuntos,salvos.data);return JSON.stringify(conjuntos)===JSON.stringify(e.conjuntos)?e:{...e,conjuntos};});},[salvos.data,modoLivre]);
   const alvo=estado.ofertas.find(o=>o.id===estado.alvo);
   const base=estado.conjuntos.find(c=>c.ano===anoSim)??estado.conjuntos.find(c=>completas(c))??estado.conjuntos[0];
   const notas=base?completas(base):null;
   const simuladas=notas?simularNotas(notas,acrescimos):null;
   const resultado=simuladas&&alvo?avaliarOferta(simuladas,alvo):null;
   const inversa=simuladas&&alvo?metaInversa(simuladas,alvo,areaMeta):null;
-  const habilidades=perfil.data?.habilidades??[];
+  const habilidades=modoLivre?[]:perfil.data?.habilidades??[];
   const ordenadas=prioridadesReais(habilidades,alvo).filter(h=>!areaMapa||h.area===areaMapa);
   const plano=planoReal(habilidades,estado.horas,alvo);
   function alterar(parte:Partial<EstrategiaSalva>){setEstado(e=>({...e,...parte}));}
@@ -52,8 +52,8 @@ export function Estrategia({ secao,usuarioId,aoAnalisar,aoDiagnostico,aoRaioX }:
     {erro&&<p className="erro" role="alert">{erro}</p>}{aviso&&<p className="aviso-suave" role="status">{aviso}</p>}
     {secao!=="metodo"&&<div className="contexto-estrategia"><label>Curso que orienta o cenário<select aria-label="Curso de referência da estratégia" value={estado.alvo} onChange={e=>alterar({alvo:e.target.value})}><option value="">Sem curso selecionado</option>{estado.ofertas.map(o=><option value={o.id} key={o.id}>{o.nome} · {o.instituicao}{o.exemplo?" · fictício":""}</option>)}</select></label><button type="button" onClick={novaOferta}>＋ Adicionar oferta</button>{alvo&&<span className={`etiqueta ${alvo.exemplo?"exemplo":""}`}>{alvo.exemplo?"Oferta fictícia":"Oferta informada · conferir edital"}</span>}</div>}
     {secao==="ingresso"&&<>
-      <div className="aviso-suave"><strong>O simulador está integrado às notas dos seus Raio-X salvos.</strong> Complete a Redação e cadastre uma oferta a partir do edital. O catálogo oficial de ofertas e cortes ainda não está carregado; as quatro ofertas de demonstração só entram se você solicitar.</div>
-      {salvos.isError&&<p className="erro">Não foi possível trazer as notas salvas: {salvos.error.message}</p>}
+      <div className="aviso-suave"><strong>{modoLivre?"Você está explorando os cálculos sem conta.":"O simulador está integrado às notas dos seus Raio-X salvos."}</strong> {modoLivre?"Informe as cinco notas e cadastre uma oferta a partir do edital.":"Complete a Redação e cadastre uma oferta a partir do edital."} O catálogo oficial de ofertas e cortes ainda não está carregado; as quatro ofertas de demonstração só entram se você solicitar.</div>
+      {!modoLivre&&salvos.isError&&<p className="erro">Não foi possível trazer as notas salvas: {salvos.error.message}</p>}
       <section className="card"><div className="cabecalho-estrategia"><div><span className="sobretitulo">SEUS CONJUNTOS DE NOTAS</span><h2>Uma edição inteira de cada vez.</h2><p>As quatro áreas do Raio-X são aproveitadas. Informe a Redação; não combinamos as melhores áreas de anos diferentes.</p></div><button type="button" onClick={aoAnalisar}>Fazer novo Raio-X →</button></div>
         {estado.conjuntos.map(c=><fieldset className="conjunto-notas" key={c.ano}><legend>Enem {c.ano} · {c.origem}</legend><div className="cinco-campos">{AREAS_INGRESSO.map(a=><label key={a}>{NOMES_INGRESSO[a]}<input aria-label={`${NOMES_INGRESSO[a]} de ${c.ano}`} type="number" min="0" max="1000" step="0.1" placeholder={a==="RED"?"Informe a Redação":"Sua nota"} value={c.notas[a]??""} onChange={e=>setEstado(atual=>({...atual,conjuntos:atual.conjuntos.map(x=>{if(x.ano!==c.ano)return x;const n={...x.notas};if(e.target.value==="")delete n[a];else n[a]=Number(e.target.value);return{...x,notas:n};})}))} /></label>)}</div>{!completas(c)&&<small>Complete as cinco notas para comparar esse conjunto.</small>}</fieldset>)}
         {!estado.conjuntos.length&&<div className="estado-vazio"><h3>Comece com suas notas.</h3><p>Faça um Raio-X ou adicione um conjunto manualmente. Nenhuma nota será inventada.</p></div>}
@@ -71,7 +71,7 @@ export function Estrategia({ secao,usuarioId,aoAnalisar,aoDiagnostico,aoRaioX }:
     {secao==="habilidades"&&<><div className="aviso-suave">As taxas e quantidades vêm das provas da sua conta. O curso selecionado ajuda a ordenar a revisão pelo peso da área; não transforma a diferença observada em previsão de ganho de nota.</div><div className="filtros-ofertas"><select aria-label="Área do mapa de habilidades" value={areaMapa} onChange={e=>setAreaMapa(e.target.value)}><option value="">Todas as áreas</option>{AREAS.map(a=><option key={a.valor} value={a.valor}>{a.nome}</option>)}</select><button type="button" onClick={aoAnalisar}>Adicionar uma análise</button></div>{perfil.isPending&&<p className="carregando">Carregando seu diagnóstico…</p>}{perfil.isError&&<p className="erro">{perfil.error.message}</p>}<section className="card mapa-real">{ordenadas.map((h,i)=><LinhaHabilidade key={`${h.area}-${h.habilidade}`} h={h} ordem={i+1} aoAbrir={()=>aoDiagnostico(h.area as Area)} />)}{!ordenadas.length&&<div className="estado-vazio"><h3>Seu mapa começa com suas respostas.</h3><p>Inclua uma prova para gerar as habilidades. Notas sozinhas não revelam seus erros individuais.</p><button className="primario" type="button" onClick={aoAnalisar}>Iniciar análise</button></div>}</section></>}
     {secao==="plano"&&<><div className="grade-plano"><section><div className="resumo-plano"><div><strong>{plano.tarefas.filter(t=>estado.concluidas[t.id]).length}<span> / {plano.tarefas.length}</span></strong><small>atividades concluídas</small></div><div><strong>{plano.minutos}<span> min</span></strong><small>organizados nesta semana</small></div><div><strong>{plano.livres}<span> min</span></strong><small>livres no seu orçamento</small></div></div>{plano.tarefas.map(t=><article className={`card tarefa-real ${estado.concluidas[t.id]?"concluida":""}`} key={t.id}><label><input aria-label={`Concluir ${t.titulo}`} type="checkbox" checked={!!estado.concluidas[t.id]} onChange={e=>alterar({concluidas:{...estado.concluidas,[t.id]:e.target.checked}})} /><div><span className="sobretitulo">{t.tipo} · {t.minutos} minutos</span><strong>{t.titulo}</strong><p>{habilidades.find(h=>h.area===t.area&&h.habilidade===t.habilidade)?.descricao}</p><small>{t.descricao}</small></div></label><button type="button" className="link" onClick={()=>aoDiagnostico(t.area as Area)}>Ver diagnóstico →</button></article>)}{!plano.tarefas.length&&<div className="card estado-vazio"><h3>{habilidades.length?"Sem prioridade de revisão indicada neste perfil.":"Ainda faltam respostas para organizar o plano."}</h3><p>O plano usa suas habilidades; não preenche lacunas com atividades de um aluno fictício.</p><button type="button" className="primario" onClick={aoAnalisar}>Fazer uma análise</button></div>}</section><aside className="card disponibilidade"><span className="sobretitulo">SUA DISPONIBILIDADE</span><h2>Quanto cabe na semana?</h2><label>Horas disponíveis<input aria-label="Horas disponíveis na semana" type="number" min="1" max="20" value={estado.horas} onChange={e=>{const n=Number(e.target.value);if(Number.isFinite(n)&&n>=1&&n<=20)alterar({horas:n});}} /></label><p>Os blocos são sugestões de organização. Tempo planejado não é previsão de ganho de nota.</p><p>Depois da revisão, tente novos itens sem consulta e registre uma nova prova para atualizar o diagnóstico.</p><button type="button" onClick={aoRaioX}>Abrir meu Raio-X</button></aside></div></>}
     {secao==="metodo"&&<Metodo anos={anos.data??[]} />}
-    <p className="persistencia-estrategia">Ofertas, Redação, ajustes e marcações do plano ficam neste navegador, separados por conta. Exporte para guardar ou levar a outro dispositivo. As provas e os Raio-X continuam salvos no servidor.</p>
+    <p className="persistencia-estrategia">{modoLivre?"Nesta exploração, os campos não são guardados quando você sai. Exporte o cenário para preservá-lo. Nenhuma prova ou diagnóstico de conta é consultado sem entrar.":"Ofertas, Redação, ajustes e marcações do plano ficam neste navegador, separados por conta. Exporte para guardar ou levar a outro dispositivo. As provas e os Raio-X continuam salvos no servidor."}</p>
     {editando&&<EditorOferta inicial={editando} aoFechar={()=>setEditando(null)} aoSalvar={o=>{setEstado(e=>({...e,ofertas:e.ofertas.some(x=>x.id===o.id)?e.ofertas.map(x=>x.id===o.id?o:x):[...e.ofertas,o],alvo:e.alvo||o.id}));setEditando(null);setErro("");}} />}
   </div>;
 }

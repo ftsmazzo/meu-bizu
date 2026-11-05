@@ -35,6 +35,8 @@ Ofertas, Redação, hipóteses, disponibilidade e marcações do plano ficam no 
 
 Não existe uma carga validada do catálogo oficial Sisu nesta entrega. O portal `https://dadosabertos.mec.gov.br/sisu` foi localizado como fonte histórica; seus recursos ainda precisam ser ingeridos e conferidos antes de alimentar ofertas e cortes automaticamente. O campo de fonte de uma oferta é informativo, não uma certificação automática.
 
+A entrada também oferece exploração dos cenários sem conta para apresentações. Nessa opção os campos começam vazios, as rotas privadas de perfil e notas ficam desativadas e nenhum estado é persistido automaticamente. A exportação é explícita. Correção, histórico e diagnóstico pessoal continuam exigindo autenticação.
+
 ## Limites preservados
 
 O método analítico é o mesmo do backend atual. Esta entrega torna o produto operável e integrado, sem apresentar o protótipo com cenários fictícios como análise de um aluno. Validação estatística adicional, tratamento de amostras pequenas, ingestão da referência oficial Sisu e gestão multiusuário de mentores continuam sendo evoluções distintas.

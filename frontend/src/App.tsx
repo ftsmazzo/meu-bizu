@@ -29,6 +29,8 @@ export function App() {
   const cliente = useQueryClient();
   const eu = useQuery({ queryKey: ["eu"], queryFn: api.eu });
   const [tela, setTela] = useState<Tela>({ nome: "inicio" });
+  const [livre, setLivre] = useState(false);
+  const [secaoLivre, setSecaoLivre] = useState<"ingresso" | "metodo">("ingresso");
   const sair = useMutation({
     mutationFn: api.sair,
     onSuccess: () => {
@@ -42,8 +44,10 @@ export function App() {
   if (eu.isError) return <p className="erro">Não consegui falar com o servidor. Tente de novo.</p>;
 
   if (!eu.data) {
+    if (livre) return <div className="bizu-livre"><header><Marca /><nav aria-label="Exploração de ingresso"><button className={secaoLivre === "ingresso" ? "ativo" : ""} onClick={() => setSecaoLivre("ingresso")}>Cenários Sisu</button><button className={secaoLivre === "metodo" ? "ativo" : ""} onClick={() => setSecaoLivre("metodo")}>Base e método</button><button className="primario" onClick={() => setLivre(false)}>Entrar para analisar minha prova</button></nav></header><main className="app bizu-content"><Estrategia secao={secaoLivre} usuarioId="visitante" modoLivre aoAnalisar={() => setLivre(false)} aoRaioX={() => setLivre(false)} aoDiagnostico={() => setLivre(false)} /></main></div>;
     return (
       <Entrada
+        aoExplorar={() => { setSecaoLivre("ingresso"); setLivre(true); }}
         aoEntrar={() => {
           setTela({ nome: "inicio" });
           void cliente.invalidateQueries({ queryKey: ["eu"] });

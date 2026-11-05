@@ -60,3 +60,16 @@ it("gera o plano das habilidades da conta e persiste a conclusão por usuário",
   expect(screen.getAllByText("Proporções e grandezas").length).toBeGreaterThan(0);
 });
 
+it("permite explorar os cálculos sem consultar diagnósticos nem notas privadas",async()=>{
+  const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
+  client.setQueryData(["perfil"],{habilidades:[{area:"MT",habilidade:16,n:10,descricao:"Habilidade privada"}]});
+  client.setQueryData(["raiox-salvos"],[{ano:2025,notas:{MT:999}}]);
+  render(<QueryClientProvider client={client}><Estrategia secao="ingresso" usuarioId="visitante" modoLivre aoAnalisar={vi.fn()} aoRaioX={vi.fn()} aoDiagnostico={vi.fn()} /></QueryClientProvider>);
+  await screen.findByRole("option",{name:"2025"});
+  expect(screen.queryByLabelText("Matemática de 2025")).not.toBeInTheDocument();
+  const chamadas=vi.mocked(fetch).mock.calls.map(c=>c[0]);
+  expect(chamadas).not.toContain("/perfil");
+  expect(chamadas).not.toContain("/raio-x/salvos");
+  expect(localStorage.getItem("bizu:estrategia:visitante")).toBeNull();
+});
+
