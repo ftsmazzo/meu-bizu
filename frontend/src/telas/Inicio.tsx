@@ -8,6 +8,10 @@ interface Props {
   usuario: Usuario;
   aoIncluir: () => void;
   aoRaioX: () => void;
+  aoNovaAnalise?: () => void;
+  aoCenarios?: () => void;
+  aoPlano?: () => void;
+  aoMapa?: () => void;
   aoAbrir: (id: string) => void;
   aoVerFoco: (area: Area) => void;
   aoVerRelatorio: () => void;
@@ -17,6 +21,10 @@ export function Inicio({
   usuario,
   aoIncluir,
   aoRaioX,
+  aoNovaAnalise,
+  aoCenarios,
+  aoPlano,
+  aoMapa,
   aoAbrir,
   aoVerFoco,
   aoVerRelatorio,
@@ -43,17 +51,20 @@ export function Inicio({
   return (
     <>
       <section className="hero">
-        <h1>Olá, {usuario.nome}</h1>
-        <p>Vamos descobrir onde focar nos seus estudos para o próximo Enem?</p>
+        <span className="sobretitulo">UM CAMINHO A PARTIR DA SUA PROVA</span>
+        <h1>Seu Enem, passo a passo.</h1>
+        <p>Olá, {usuario.nome}. Informe suas notas e respostas para ver onde você está e onde concentrar a revisão.</p>
         <div className="acoes">
-          <button type="button" className="claro" onClick={aoRaioX}>
-            Fazer o Raio-X pela nota
+          <button type="button" className="claro" onClick={aoNovaAnalise ?? aoRaioX}>
+            Iniciar análise do Enem →
           </button>
           <button type="button" className="vazado" onClick={aoIncluir}>
-            Incluir resultado
+            Incluir uma prova avulsa
           </button>
         </div>
       </section>
+      <section className="como-analisar" aria-label="Como fazer uma análise"><article><span>01</span><h3>Informe notas e localização</h3><p>Escolha o ano, as notas, o estado e o município onde fez a prova.</p></article><article><span>02</span><h3>Insira as respostas do aluno</h3><p>Cole a sequência ou marque as alternativas do caderno correto.</p></article><article><span>03</span><h3>Apresente o Raio-X</h3><p>Veja a correção, as habilidades e os comparativos disponíveis para Brasil, estado e município.</p></article></section>
+      <section className="atalhos-estrategia" aria-label="Do diagnóstico à estratégia"><article><span className="sobretitulo">SEU DESTINO</span><h3>Compare cenários por curso.</h3><p>Use as notas do seu Raio-X, complete a Redação e explore pesos, mínimos e metas.</p><button type="button" onClick={aoCenarios}>Abrir cenários Sisu →</button></article><article><span className="sobretitulo">SEU PRÓXIMO PASSO</span><h3>Organize a revisão da semana.</h3><p>Conecte as habilidades das suas provas ao tempo que você tem para estudar.</p><button type="button" onClick={aoPlano}>Montar plano da semana →</button></article><article><span className="sobretitulo">SUA EVIDÊNCIA</span><h3>Veja o mapa de habilidades.</h3><p>Compare seus acertos com a referência e identifique o que ainda precisa investigar.</p><button type="button" onClick={aoMapa}>Abrir mapa de habilidades →</button></article></section>
 
       {areas.length > 0 && (
         <div className="stats">
@@ -159,3 +170,5 @@ export function Inicio({
     </>
   );
 }
+
+

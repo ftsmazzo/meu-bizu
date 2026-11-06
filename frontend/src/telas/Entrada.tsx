@@ -5,7 +5,7 @@ import { api } from "../api";
 import { Marca } from "../ui/Marca";
 
 /** Entrar ou criar conta. O cadastro declara ter 18 anos ou mais (a API também exige). */
-export function Entrada({ aoEntrar }: { aoEntrar: () => void }) {
+export function Entrada({ aoEntrar, aoExplorar }: { aoEntrar: () => void; aoExplorar?: () => void }) {
   const [criando, setCriando] = useState(false);
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
@@ -27,8 +27,9 @@ export function Entrada({ aoEntrar }: { aoEntrar: () => void }) {
     <main className="entrada-tela">
       <div className="entrada-cartao">
         <Marca />
-        <h1 style={{ marginTop: 18 }}>{criando ? "Crie a sua conta" : "Bem-vindo de volta"}</h1>
-        <p className="sub">Descubra com dados oficiais onde focar nos estudos para o Enem.</p>
+        <h1 style={{ marginTop: 18 }}>{criando ? "Comece pela sua conta." : "Sua prova merece uma análise."}</h1>
+        <p className="sub">Analise notas e respostas, compare com Brasil, estado e município e conecte o resultado aos cenários por curso e ao seu plano de estudo.</p>
+        {!criando && <p className="entrada-integrada">Use sua conta do Meu Bizu. Se ainda não tiver uma, crie abaixo para começar.</p>}
       <form onSubmit={submeter}>
         {criando && (
           <label>
@@ -70,13 +71,16 @@ export function Entrada({ aoEntrar }: { aoEntrar: () => void }) {
           className="primario"
           disabled={enviar.isPending || (criando && !maior)}
         >
-          {criando ? "Criar conta" : "Entrar"}
+          {enviar.isPending ? "Conectando…" : criando ? "Criar conta" : "Entrar e começar"}
         </button>
       </form>
       <button type="button" className="link" onClick={() => setCriando(!criando)}>
         {criando ? "Já tenho conta" : "Criar uma conta"}
       </button>
+      {aoExplorar && <div className="entrada-explorar"><p>Quer apresentar os cálculos antes de entrar?</p><button type="button" onClick={aoExplorar}>Explorar cenários de ingresso →</button><small>Você informa as notas e ofertas. Provas, correção e histórico usam sua conta.</small></div>}
       </div>
     </main>
   );
 }
+
+
