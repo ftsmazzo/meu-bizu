@@ -1,3 +1,4 @@
+import { ofertasIniciais, type OrigemCatalogo } from "./catalogo";
 import type { LinhaPerfil, PedidoSalvo } from "./api";
 
 export const AREAS_INGRESSO = ["LC", "CH", "CN", "MT", "RED"] as const;
@@ -9,13 +10,13 @@ export interface Oferta {
   id: string; nome: string; instituicao: string; campus: string; uf: string; modalidade: string; turno: string;
   pesos: CincoNotas; minimos: CincoNotas; mediaMinima: number; bonus: number;
   referencia: number | null; anoReferencia: number; tipoReferencia: "meta" | "historico" | "parcial";
-  fonte: string; exemplo: boolean;
+  fonte: string; exemplo: boolean; catalogo?: OrigemCatalogo;
 }
 export interface EstrategiaSalva {
-  versao: 1; selecao: number; conjuntos: ConjuntoNotas[]; ofertas: Oferta[];
+  versao: 1; catalogoVersao?: number; selecao: number; conjuntos: ConjuntoNotas[]; ofertas: Oferta[];
   alvo: string; horas: number; concluidas: Record<string, boolean>;
 }
-export const vazioEstrategia = (): EstrategiaSalva => ({ versao: 1, selecao: 2026, conjuntos: [], ofertas: [], alvo: "", horas: 3, concluidas: {} });
+export const vazioEstrategia = (): EstrategiaSalva => ({ versao: 1, catalogoVersao: 1, selecao: 2026, conjuntos: [], ofertas: ofertasIniciais(), alvo: "", horas: 3, concluidas: {} });
 export function cinco(valor: number): CincoNotas { return { LC: valor, CH: valor, CN: valor, MT: valor, RED: valor }; }
 function limitado(n: unknown, de: number, ate: number, nome: string): number {
   if (typeof n !== "number" || !Number.isFinite(n) || n < de || n > ate) throw new Error(`${nome}: informe um número entre ${de} e ${ate}.`);
@@ -38,6 +39,13 @@ export function validarOferta(o: Oferta): Oferta {
   limitado(o.anoReferencia, 2009, 2100, "Ano da referência");
   if (!["meta", "historico", "parcial"].includes(o.tipoReferencia)) throw new Error("Escolha o tipo da referência.");
   if (o.fonte) { const u = new URL(o.fonte); if (!["https:", "http:"].includes(u.protocol)) throw new Error("Use uma URL http ou https para a fonte."); }
+  if(o.catalogo) {
+    const c=o.catalogo;
+    for(const url of [c.fonteRegras,c.fonteReferencia].filter(Boolean)) if(new URL(url).protocol!=="https:") throw new Error("A fonte do catálogo precisa usar https.");
+    limitado(c.anoRegras,2009,2100,"Ano das regras"); limitado(c.paginaRegras,1,5000,"Página das regras"); limitado(c.vagas,1,100000,"Vagas da edição");
+    if(c.paginaReferencia!==null) limitado(c.paginaReferencia,1,5000,"Página da referência");
+    if(typeof c.id!=="string" || typeof c.sigla!=="string" || !c.fonteRegras) throw new Error("Origem do catálogo inválida.");
+  }
   return o;
 }
 export function avaliarOferta(notas: CincoNotas, oferta: Oferta) {
@@ -105,8 +113,7 @@ export function validarEstrategia(raw: unknown): EstrategiaSalva {
   const anos=new Set<number>();
   const conjuntos=d.conjuntos.map(c=>{limitado(c.ano,2009,2100,"Ano do Enem");if(!Number.isInteger(c.ano)||anos.has(c.ano))throw new Error("Ano repetido ou inválido.");anos.add(c.ano);const notas:Partial<CincoNotas>={};for(const a of AREAS_INGRESSO)if(c.notas?.[a]!==undefined)notas[a]=limitado(c.notas[a],0,1000,NOMES_INGRESSO[a]);return{ano:c.ano,notas,origem:String(c.origem??"Informado por você").slice(0,120)};});
   const ids=new Set<string>();
-  const ofertas=d.ofertas.map(o=>{if(typeof o.id!=="string"||!/^[-a-zA-Z0-9]{1,80}$/.test(o.id)||ids.has(o.id))throw new Error("Identificador de oferta inválido ou repetido.");ids.add(o.id);validarOferta(o);return{...o,instituicao:String(o.instituicao??"").slice(0,160),campus:String(o.campus??"").slice(0,160),uf:String(o.uf??"").slice(0,2),modalidade:String(o.modalidade??"").slice(0,240),turno:String(o.turno??"").slice(0,60),exemplo:o.exemplo===true};});
+  const ofertas=d.ofertas.map(o=>{if(typeof o.id!=="string"||!/^[-_a-zA-Z0-9]{1,80}$/.test(o.id)||ids.has(o.id))throw new Error("Identificador de oferta inválido ou repetido.");ids.add(o.id);validarOferta(o);return{...o,instituicao:String(o.instituicao??"").slice(0,160),campus:String(o.campus??"").slice(0,160),uf:String(o.uf??"").slice(0,2),modalidade:String(o.modalidade??"").slice(0,240),turno:String(o.turno??"").slice(0,60),exemplo:o.exemplo===true};});
   const concluidas:Record<string,boolean>={};for(const [key,v]of Object.entries(d.concluidas??{}))if(/^[-a-zA-Z0-9]{1,100}$/.test(key)&&typeof v==="boolean")concluidas[key]=v;
-  return { versao:1,selecao:d.selecao,conjuntos,ofertas,alvo:ofertas.some(o=>o.id===d.alvo)?d.alvo:ofertas[0]?.id??"",horas:d.horas,concluidas };
+  return { versao:1,catalogoVersao:d.catalogoVersao===1?1:undefined,selecao:d.selecao,conjuntos,ofertas,alvo:ofertas.some(o=>o.id===d.alvo)?d.alvo:ofertas[0]?.id??"",horas:d.horas,concluidas };
 }
-

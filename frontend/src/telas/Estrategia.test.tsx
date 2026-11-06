@@ -3,12 +3,14 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import { Estrategia } from "./Estrategia";
 import { App } from "../App";
+import catalogo from "../../public/catalogo-sisu.json";
 
 beforeEach(()=>{
   localStorage.clear();
   Object.defineProperty(HTMLDialogElement.prototype,"showModal",{configurable:true,value:function(){this.setAttribute("open","");}});
   vi.stubGlobal("scrollTo",vi.fn());
   vi.stubGlobal("fetch",vi.fn(async(url:string)=>{
+    if(url==="/catalogo-sisu.json")return new Response(JSON.stringify(catalogo));
     if(url==="/conta/eu")return new Response(JSON.stringify({id:"usuario-teste",nome:"Pessoa de teste",email:"teste@example.invalid"}));
     if(url==="/anos")return new Response(JSON.stringify([2024,2025]));
     if(url==="/provas")return new Response("[]");
@@ -29,12 +31,28 @@ it("restaura os módulos sem remover a análise e as provas reais da navegação
   for(const name of ["Visão geral","Nova análise","Incluir prova","Raio-X pela nota","Mapa de habilidades","Cenários Sisu","Plano da semana","Base e método"])expect(within(nav).getByRole("button",{name:new RegExp(name)})).toBeInTheDocument();
 });
 
-it("aproveita as quatro notas salvas sem inventar Redação ou carregar cursos fictícios",async()=>{
+it("aproveita as quatro notas salvas e oferece opções reais sem inventar Redação",async()=>{
   montar();
   expect(await screen.findByLabelText("Matemática de 2025")).toHaveValue(670);
   expect(screen.getByLabelText("Redação de 2025")).toHaveValue(null);
-  expect(screen.getByText("Nenhuma oferta cadastrada.")).toBeInTheDocument();
+  expect(screen.queryByText("Nenhuma oferta cadastrada.")).not.toBeInTheDocument();
+  expect(screen.getByRole("option",{name:/MEDICINA.*UFMG/})).toBeInTheDocument();
   expect(screen.queryByText("Campus Horizonte")).not.toBeInTheDocument();
+});
+
+it("busca por curso sem acento e adiciona uma modalidade preenchida sem alterar notas",async()=>{
+  const user=userEvent.setup();montar();
+  await screen.findByText(/204 ofertas encontradas/);
+  await user.type(screen.getByLabelText("Buscar no catálogo"),"medicina");
+  await user.selectOptions(screen.getByLabelText("Instituição do catálogo"),"UFMG");
+  await user.selectOptions(screen.getByLabelText("Modalidade do catálogo"),"LI_EP");
+  await user.click(screen.getByRole("button",{name:"Adicionar MEDICINA · UFMG · Campus Saúde · Integral (Matutino/Vespertino) · LI_EP"}));
+  expect(screen.getByRole("combobox",{name:"Curso de referência da estratégia"})).toHaveValue("ufmg-2026-12970-integral-li_ep");
+  expect(screen.getByLabelText("Matemática de 2025")).toHaveValue(670);
+  expect(screen.getByLabelText("Redação de 2025")).toHaveValue(null);
+  expect(screen.getAllByRole("link",{name:/Termo de adesão 2026/}).length).toBeGreaterThan(0);
+  const salvo=JSON.parse(localStorage.getItem("bizu:estrategia:usuario-teste")!);
+  expect(salvo.ofertas.find((o:{id:string})=>o.id==="ufmg-2026-12970-integral-li_ep").catalogo.modalidadeCodigo).toBe("LI_EP");
 });
 
 it("permite operar oferta, simulação e meta com as notas do Raio-X",async()=>{
@@ -72,4 +90,3 @@ it("permite explorar os cálculos sem consultar diagnósticos nem notas privadas
   expect(chamadas).not.toContain("/raio-x/salvos");
   expect(localStorage.getItem("bizu:estrategia:visitante")).toBeNull();
 });
-
