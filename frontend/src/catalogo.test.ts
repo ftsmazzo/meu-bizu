@@ -1,5 +1,5 @@
 import dados from "../public/catalogo-sisu.json";
-import { expandirCatalogo, normalizarBusca, ofertasIniciais, notaPublicada, type CatalogoArquivo } from "./catalogo";
+import { expandirCatalogo, normalizarBusca, ofertasIniciais, notaPublicada, descricaoOferta, type CatalogoArquivo } from "./catalogo";
 import { validarOferta, validarEstrategia, vazioEstrategia } from "./estrategia";
 
 const catalogo=expandirCatalogo(dados as unknown as CatalogoArquivo);
@@ -34,4 +34,12 @@ it("inicia com seis ofertas reais idênticas ao catálogo e sem notas do aluno",
   for(const o of ofertasIniciais())expect(o).toEqual(catalogo.find(c=>c.id===o.id));
   const copias=ofertasIniciais();copias[0].pesos.MT=10;expect(ofertasIniciais()[0].pesos.MT).toBe(1);
   expect(normalizarBusca("Ciência da Computação")).toBe("ciencia da computacao");
+});
+
+it("distingue ofertas do mesmo curso no seletor por campus, turno e modalidade",()=>{
+  const a=catalogo.find(o=>o.id==="ufc-2026-1272079-integral-ac")!;
+  const b=catalogo.find(o=>o.id==="ufc-2026-1272079-integral-li_ep")!;
+  expect(descricaoOferta(a)).not.toBe(descricaoOferta(b));
+  expect(descricaoOferta(b)).toContain("Campus da UFC em Crateús");
+  expect(descricaoOferta(b)).toContain("LI_EP");
 });

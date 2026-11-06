@@ -47,3 +47,7 @@ export async function carregarCatalogo() {
 export function rotuloOrigem(o: Oferta) {
   return o.exemplo?"Fictícia · demonstração":o.catalogo?.personalizada?"Personalizada a partir do catálogo":o.catalogo?`Catálogo · ${o.catalogo.sigla} · regras ${o.catalogo.anoRegras}`:"Informada · conferir edital";
 }
+
+export function descricaoOferta(o: Oferta) {
+  return [o.nome,o.catalogo?.sigla??o.instituicao,o.campus,o.turno,o.catalogo?.modalidadeCodigo??o.modalidade,o.exemplo?"fictícia":""].filter(Boolean).join(" · ");
+}
